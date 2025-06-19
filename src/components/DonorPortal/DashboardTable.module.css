@@ -1,0 +1,20 @@
+/* DashboardTable.css */
+
+.custom-datagrid-header {
+  background-color: #12b4bf !important; /* Change this to your desired header color */
+  color: white; /* Change this to your desired text color */
+  padding: 8px !important; /* Adjust the padding to decrease the height */
+  font-weight: bold;
+  /* overflow: visible !important;
+  white-space: normal !important; */
+  /* font-size: 10px !important; */
+
+  /* font-size: 10px; */
+}
+
+/* .MuiDataGrid-root .MuiDataGrid-row:nth-child(even) {
+  background-color: #f5f0f0; Change this to your desired even row color */
+/* }
+
+.MuiDataGrid-root .MuiDataGrid-row:nth-child(odd) {
+  background-color: #f5f0f0; /* Change this to your desired odd row color */
