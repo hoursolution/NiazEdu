@@ -127,6 +127,7 @@ const AllStudents = () => {
   const [students, setStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const [deleteConfirmationClose, setDeleteConfirmationClose] = useState(true);
   const [deleteId, setDeleteId] = useState(null);
   const [filters, setFilters] = useState({ name: "", age: "", city: "" });
   const [openPopup, setOpenPopup] = useState(false);
@@ -236,7 +237,7 @@ const AllStudents = () => {
           setStudents((prevStudents) =>
             prevStudents.filter((app) => app.id !== id)
           );
-          setDeleteConfirmationClose(); // Close dialog on success
+          handleDeleteConfirmationClose(); // Close dialog on success
         } else {
           console.error("Failed to delete student");
         }
@@ -381,7 +382,7 @@ const AllStudents = () => {
       align: "center",
       width: 200,
       renderCell: (params) => {
-        const name = params.row.applications[0]?.email;
+        const name = params.row?.email;
         const isSelected = !!name;
 
         return (
@@ -474,9 +475,7 @@ const AllStudents = () => {
               backgroundColor: "#406c66", // Optional: darker on hover
             },
           }}
-          onClick={() => {
-            setDeleteConfirmationOpen(true);
-          }}
+          onClick={() => handleDeleteConfirmationOpen(params.row.id)}
         >
           Delete
         </Button>

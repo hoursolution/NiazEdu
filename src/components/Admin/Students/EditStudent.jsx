@@ -28,6 +28,7 @@ const EditStudentForm = () => {
     last_name: "",
     gender: "",
     user: "",
+    cnic: "",
     username: "",
   });
   const [users, setUsers] = useState([]);
@@ -37,6 +38,7 @@ const EditStudentForm = () => {
     fetch(`${BASE_URL}/api/studentDetails/${studentId}/`)
       .then((response) => response.json())
       .then((data) => {
+        console.log(data);
         setFormData(data);
       })
       .catch((error) => {
@@ -61,6 +63,7 @@ const EditStudentForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     try {
       const response = await fetch(
         `${BASE_URL}/api/students/edit/${studentId}/`,
@@ -69,7 +72,7 @@ const EditStudentForm = () => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(dataToSend),
         }
       );
       if (response.ok) {
@@ -131,6 +134,16 @@ const EditStudentForm = () => {
                 label="Email"
                 type="email"
                 value={formData.email}
+                onChange={handleChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                name="cnic"
+                label="Cnic/B-Form"
+                type="number"
+                value={formData.cnic}
                 onChange={handleChange}
                 fullWidth
                 required

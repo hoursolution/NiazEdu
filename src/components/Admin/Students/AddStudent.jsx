@@ -179,7 +179,7 @@ const CreateStudentForm = () => {
                 value={formData.email}
                 onChange={handleChange}
                 fullWidth
-                required
+                // required
                 // helperText="will be consider as student username"
               />
             </Grid>
