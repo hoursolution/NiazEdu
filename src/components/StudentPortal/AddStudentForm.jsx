@@ -13,7 +13,8 @@ import {
 
 const AddStudentForm = () => {
   // const BASE_URL = "http://127.0.0.1:8000";
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
   const [formData, setFormData] = useState({
     name: "",
     fathers_name: "",

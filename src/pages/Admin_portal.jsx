@@ -21,7 +21,7 @@ const Admin_portal = () => {
       navigate("/login");
     }
 
-    const tokenExpirationTime = 365 * 24 * 60 * 60 * 1000; // 1 year
+    const tokenExpirationTime = 365 * 24 * 60 * 60 * 1000; // 1 year
     const timer = setTimeout(() => {
       localStorage.removeItem("token");
       navigate("/login");
@@ -37,7 +37,15 @@ const Admin_portal = () => {
   const drawerWidth = sidebarOpen ? drawerWidthOpen : drawerWidthClosed;
 
   return (
-    <Box sx={{ display: "flex", backgroundColor: "#f5f0f0", height: "100vh" }}>
+    <Box
+      sx={{
+        display: "flex",
+        backgroundColor: "rgba(255, 255, 255, 0.65)",
+        height: "100vh",
+        width: "100vw",
+        overflowX: "hidden",
+      }}
+    >
       {/* Sidebar */}
       <Box
         sx={{
@@ -63,10 +71,9 @@ const Admin_portal = () => {
           flexGrow: 1,
           marginLeft: `${drawerWidth}px`,
           transition: "margin-left 0.3s ease",
-          height: "100vh",
-          overflow: "auto",
+          overflow: "hidden", // prevent horizontal scroll
+          width: `calc(100vw - ${drawerWidth}px)`, // explicitly limit width
           position: "relative",
-          // marginTop: "60px",
         }}
       >
         <AdminNAvBar
@@ -78,15 +85,31 @@ const Admin_portal = () => {
         <Box
           sx={{
             position: "fixed",
-            top: "60px",
-            left: `${drawerWidth - 30}px`,
-            transition: "left 0.3s ease",
+            top: "240px",
+            left: sidebarOpen
+              ? `${drawerWidthOpen - 38}px`
+              : `${drawerWidthClosed - 25}px`,
             zIndex: 1400,
+            transition: "left 0.3s ease",
           }}
         >
           <IconButton
-            style={{ backgroundColor: "#14475a", color: "white" }}
             onClick={handleSidebarToggle}
+            sx={{
+              backgroundColor: "#cce7ff",
+              color: "#1E3A8A",
+              width: "26px",
+              height: "52px",
+              borderTopLeftRadius: "50%",
+              borderBottomLeftRadius: "50%",
+              borderTopRightRadius: 0,
+              borderBottomRightRadius: 0,
+              boxShadow: "4px 0 12px rgba(0, 0, 0, 0.2)",
+              "&:hover": {
+                backgroundColor: "#b2dbff",
+              },
+              transition: "all 0.3s ease",
+            }}
           >
             {sidebarOpen ? (
               <KeyboardDoubleArrowLeftIcon />
@@ -95,7 +118,20 @@ const Admin_portal = () => {
             )}
           </IconButton>
         </Box>
-        <Box sx={{ marginTop: "60px" }}>
+
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            minHeight: "calc(100vh - 64px)", // space for navbar
+            paddingTop: "64px",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "100%",
+            overflow: "auto", // allow scroll if content is large, but no x-scroll
+            paddingX: "12px",
+          }}
+        >
           <Outlet />
         </Box>
       </Box>

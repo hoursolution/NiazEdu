@@ -16,6 +16,7 @@ import {
   InputLabel,
   Box,
   Typography,
+  CircularProgress,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { borderRadius, padding, styled, textAlign } from "@mui/system";
@@ -27,51 +28,59 @@ import { ThumbUp, Visibility } from "@mui/icons-material";
 
 const BASE_URL = "https://zeenbackend-production.up.railway.app";
 // const BASE_URL = "http://127.0.0.1:8000";
+// --- Glass Lavender + Midnight Mode ---
+const primaryColor = "#312E81"; // Indigo-900 for nav
+const secondaryColor = "#A78BFA"; // Light violet
+const accentColor = "#8B5CF6"; // Purple-500 for buttons
+const bgColor = "rgba(255, 255, 255, 0.5)"; // Translucent base
+const cardBg = "rgba(255, 255, 255, 0.65)";
+const textColor = "#1E1B4B"; // Deep indigo for text
+const headerBg = "rgba(243, 232, 255, 0.25)";
 
-// custom toolbar for table
-const CustomToolbar = ({ selectedRows, handleExport }) => {
+// Custom GridToolbar
+const CustomToolbar = () => {
   return (
-    <GridToolbarContainer>
-      <GridToolbarFilterButton sx={{ color: "#0c74a6" }} />{" "}
-      <GridToolbarColumnsButton sx={{ color: "#0c74a6" }} />
-      <GridToolbarDensitySelector sx={{ color: "#0c74a6" }} />
-      {/* <Button
-        sx={{
-          fontSize: "14px",
-          letterSpacing: 0.15,
-          fontWeight: 500,
-          textTransform: "none",
-          color: selectedRows.length === 0 ? "gray" : "#fe6c6c",
-          "&:hover": {
-            color: selectedRows.length === 0 ? "gray" : "red",
-            backgroundColor: "transparent",
-          },
-        }}
-        disabled={selectedRows.length === 0}
-        onClick={handleExport}
-        startIcon={<CiExport />}
-      >
-        Export
-      </Button> */}
+    <GridToolbarContainer
+      sx={{
+        backgroundColor: cardBg, // Match table background
+        borderBottom: `1px solid ${headerBg}`,
+        padding: "8px",
+        borderRadius: "8px 8px 0 0", // Match table border radius
+      }}
+    >
+      <GridToolbarColumnsButton sx={{ color: textColor }} />
+      <GridToolbarDensitySelector sx={{ color: textColor }} />
+      {/* GridToolbarFilterButton is not used in the original CustomToolbar, but can be added if needed */}
+      {/* <GridToolbarFilterButton sx={{ color: textColor }} /> */}
     </GridToolbarContainer>
   );
 };
 
 // Custom styled DataGrid component
 const StyledDataGrid = styled(DataGrid)({
+  border: `1px solid ${cardBg}`, // Subtle border
+  borderRadius: "8px", // Rounded corners for the whole table
+  overflow: "hidden", // Ensures rounded corners are visible
+
   "& .MuiDataGrid-columnHeaders": {
-    backgroundColor: "#263238",
-    color: "white",
+    backgroundColor: headerBg, // Darker header background
+    color: textColor, // White text for headers
     fontSize: "13px",
-    textTransform: "capitalize",
+    textTransform: "uppercase", // More modern look
+    fontWeight: "bold",
+    borderBottom: `1px solid ${accentColor}`, // Accent line below headers
   },
   "& .MuiDataGrid-columnHeader": {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    borderLeft: "1px solid white",
+    borderLeft: `1px solid #aaa`, // Subtle border between headers
     textAlign: "center",
     whiteSpace: "normal",
+    "&:first-of-type": {
+      // Remove left border for the first header
+      borderLeft: "none",
+    },
   },
   "& .MuiDataGrid-columnHeaderTitle": {
     whiteSpace: "normal",
@@ -83,7 +92,7 @@ const StyledDataGrid = styled(DataGrid)({
     textAlign: "center",
   },
   "& .MuiDataGrid-cell": {
-    borderLeft: "1px solid #aaa",
+    borderLeft: `1px solid #aaa`, // Subtle border between cells
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
@@ -93,12 +102,32 @@ const StyledDataGrid = styled(DataGrid)({
     lineHeight: 1.4,
     padding: "6px",
     fontSize: "12px",
-  },
-
-  "& .MuiDataGrid-row": {
-    "&:hover": {
-      backgroundColor: "rgba(0, 128, 0, 0.02)",
+    color: textColor, // Default cell text color
+    "&:first-of-type": {
+      // Remove left border for the first cell in a row
+      borderLeft: "none",
     },
+  },
+  "& .MuiDataGrid-row": {
+    backgroundColor: cardBg, // Dark background for rows
+    "&:nth-of-type(odd)": {
+      backgroundColor: "rgba(255, 255, 255, 0.65)", // Slightly different shade for odd rows (zebra striping)
+    },
+    "&:hover": {
+      backgroundColor: "rgba(59, 130, 246, 0.15)", // Accent color on hover
+    },
+  },
+  "& .MuiDataGrid-footerContainer": {
+    backgroundColor: headerBg, // Match header background for footer
+    color: textColor,
+    borderTop: `1px solid ${accentColor}`,
+    borderRadius: "0 0 8px 8px", // Match table border radius
+  },
+  "& .MuiTablePagination-root": {
+    color: textColor, // Pagination text color
+  },
+  "& .MuiSvgIcon-root": {
+    color: textColor, // Pagination icons color
   },
 });
 
@@ -127,223 +156,56 @@ const ProjectionDashboard1 = () => {
   });
   const navigate = useNavigate();
 
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
+
   // Fetch students with error handling
   const fetchStudents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await axios.get(`${BASE_URL}/students/`);
-      const today = new Date();
+      const response = await axios.get(
+        `${BASE_URL}/api/student-projection-data/`
+      );
 
-      const processedData = response.data
-        .filter((student) => {
-          const hasApplications =
-            Array.isArray(student.applications) &&
-            student.applications.length > 0;
+      const rawData = response.data.results;
 
-          const hasProjections = student.applications?.some(
-            (app) =>
-              Array.isArray(app.projections) && app.projections.length > 0
-          );
-
-          const hasMatchingSelectDonor = student.applications?.some((app) =>
-            student.selectDonor?.some?.((sd) => sd.application === app.id)
-          );
-
-          return (hasApplications && hasProjections) || hasMatchingSelectDonor;
-        })
-        .flatMap((student) => {
-          const today = new Date();
-          const applicationsSorted = [...student.applications].sort(
-            (a, b) => a.id - b.id
-          );
-
-          const firstApp = applicationsSorted[0];
-          const includeAll =
-            firstApp.education_status &&
-            firstApp.education_status === "Finished";
-
-          // const appsToProcess = includeAll ? applicationsSorted : [firstApp]; // Only first if not finished
-
-          // Progressive inclusion of applications based on education_status
-          const appsToProcess = [];
-          for (let i = 0; i < applicationsSorted.length; i++) {
-            if (i === 0) {
-              appsToProcess.push(applicationsSorted[i]);
-            } else {
-              const prevApp = applicationsSorted[i - 1];
-              if (prevApp.education_status === "Finished") {
-                appsToProcess.push(applicationsSorted[i]);
-              } else {
-                break;
-              }
-            }
-          }
-
-          return (
-            appsToProcess
-              // .filter((app) => app.projections?.length > 0)
-              .map((app) => {
-                const educationStatus = app.education_status || "N/A";
-                const applicationId = app.id;
-
-                const allProjections = app.projections.map((item) => {
-                  const challanDueDate = item.challan_due_date
-                    ? new Date(item.challan_due_date)
-                    : null;
-                  const challanPaymentDate = item.challan_payment_date
-                    ? new Date(item.challan_payment_date)
-                    : null;
-
-                  if (challanPaymentDate) {
-                    item.status = "Paid";
-                  } else if (challanDueDate && challanDueDate < today) {
-                    item.status = "Overdue";
-                  } else if (challanDueDate && challanDueDate >= today) {
-                    item.status = "Due";
-                  } else {
-                    item.status = item.status || "NYD";
-                  }
-
-                  return item;
-                });
-
-                // Select the relevant projection
-                let selectedProjection;
-                if (allProjections.length === 1) {
-                  selectedProjection = allProjections[0];
-                } else {
-                  const upcoming = allProjections.filter(
-                    (p) => new Date(p.Projection_ending_date) >= today
-                  );
-                  if (upcoming.length > 0) {
-                    selectedProjection = upcoming.sort(
-                      (a, b) =>
-                        new Date(a.Projection_ending_date) -
-                        new Date(b.Projection_ending_date)
-                    )[0];
-                  } else {
-                    selectedProjection = [...allProjections].sort(
-                      (a, b) =>
-                        new Date(b.Projection_ending_date) -
-                        new Date(a.Projection_ending_date)
-                    )[0];
-                  }
-                }
-                // Match the donor to the correct application
-                const selectDonorForApp = student.selectDonor?.find?.(
-                  (sd) => sd.application === app.id
-                );
-                const sponsorName =
-                  selectDonorForApp?.donor?.donor_name || "N/A";
-
-                // const latestProjection = selectedProjection || {};
-
-                const latestProjection = selectedProjection || {};
-                let cleanPercentage = `${latestProjection.percentage}`;
-                if (latestProjection.percentage) {
-                  const percentageStr = latestProjection.percentage;
-
-                  let cleaned = [];
-
-                  if (latestProjection.percentage) {
-                    const percentageStr = latestProjection.percentage;
-
-                    let cleaned = [];
-
-                    if (percentageStr.includes("Sponsor")) {
-                      // Format: "Sponsor 1: 33.3%, Sponsor 2: 66.7%"
-                      cleaned = percentageStr
-                        .split(",")
-                        .map((entry) => {
-                          const match = entry.match(
-                            /(Sponsor \d+):\s*([\d.]+)%?/
-                          );
-                          if (match) {
-                            const label = match[1];
-                            const value = Math.round(parseFloat(match[2]));
-                            return value > 0 ? `${value}%` : null;
-                          }
-                          return null;
-                        })
-                        .filter(Boolean);
-                    } else {
-                      // Format: "Education: 100.0%, Other: 0.0%"
-                      cleaned = percentageStr
-                        .split(",")
-                        .map((entry) => {
-                          const match = entry.match(/(.*?):\s*([\d.]+)%?/);
-                          if (match) {
-                            const label = match[1].trim();
-                            const value = Math.round(parseFloat(match[2]));
-                            return value > 0 ? `${value}%` : null;
-                          }
-                          return null;
-                        })
-                        .filter(Boolean);
-                    }
-
-                    if (cleaned.length > 0) {
-                      cleanPercentage = cleaned.join(", ");
-                    }
-                  }
-
-                  const validPercentages = cleaned.filter((val) => val > 0);
-
-                  if (validPercentages.length > 0) {
-                    cleanPercentage = validPercentages
-                      .map((val) => `${val}%`)
-                      .join(", ");
-                  }
-                }
-                if (educationStatus === "Finished") {
-                  return {
-                    id: `${student.id}-${applicationId}`,
-                    fullName: `${student.student_name} ${student.last_name}`,
-                    sponsor: sponsorName,
-                    semester: "",
-                    amount: "",
-                    percentage: "",
-                    status: "Finished",
-                    dueDate: "",
-                    program: app.program_interested_in || "N/A",
-                    rawApplicationId: applicationId,
-                  };
-                }
-
-                return {
-                  id: `${student.id}-${applicationId}`,
-                  fullName: `${student.student_name || ""} ${
-                    student.last_name || ""
-                  }`,
-                  sponsor: sponsorName,
-                  semester: latestProjection.semester_number || "N/A",
-                  amount: latestProjection.total_amount || "N/A",
-                  percentage: cleanPercentage,
-                  status: latestProjection.status || "Pending",
-                  dueDate: latestProjection.challan_due_date
-                    ? new Date(
-                        latestProjection.challan_due_date
-                      ).toLocaleDateString("en-GB", {
-                        day: "numeric",
-                        month: "numeric",
-                        year: "numeric",
-                      })
-                    : "N/A",
-                  program: app.program_interested_in || "N/A",
-                  rawApplicationId: applicationId,
-                };
-              })
-          );
+      console.log(rawData);
+      const processedData = rawData.flatMap((student) => {
+        return student.applications.map((app) => {
+          const proj = app.projection || {};
+          return {
+            id: `${student.id}-${app.id}`,
+            fullName: `${student.student_name || ""} ${
+              student.last_name || ""
+            }`,
+            sponsor:
+              student.select_donor.find((sd) => sd.application === app.id)
+                ?.donor_name || "N/A",
+            semester: proj.semester_number || "",
+            amount: proj.total_amount || "",
+            percentage: proj.percentage || "",
+            status: proj.status || "Pending",
+            dueDate: proj.challan_due_date
+              ? new Date(proj.challan_due_date).toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "numeric",
+                  year: "numeric",
+                })
+              : "",
+            program: app.program_interested_in || "N/A",
+            rawApplicationId: app.id,
+          };
         });
+      });
 
-      const sortedData = processedData.sort(
+      const sorted = processedData.sort(
         (a, b) => a.rawApplicationId - b.rawApplicationId
       );
 
-      setStudents(sortedData);
-      setFilteredStudents(sortedData);
+      setStudents(sorted);
+      setFilteredStudents(sorted);
     } catch (error) {
       console.error("Error fetching students:", error);
       setError("Failed to load student data. Please try again later.");
@@ -351,6 +213,7 @@ const ProjectionDashboard1 = () => {
       setLoading(false);
     }
   }, []);
+
   // Filter logic
   const filterStudents = useCallback(() => {
     let filtered = [...students];
@@ -413,9 +276,20 @@ const ProjectionDashboard1 = () => {
       field: "percentage",
       headerName: "Sponsor Percentage",
       flex: 1,
-      minWidth: 90,
+      minWidth: 100,
       headerAlign: "center",
       align: "center",
+      renderCell: (params) => {
+        const value = params.value;
+        const status = params.row.status;
+        return value !== null && value !== undefined && value !== "" ? (
+          value
+        ) : status === "Finished" ? (
+          "-"
+        ) : (
+          <span style={{ color: "red" }}>no date</span>
+        );
+      },
     },
     {
       field: "semester",
@@ -424,6 +298,17 @@ const ProjectionDashboard1 = () => {
       minWidth: 140,
       headerAlign: "center",
       align: "center",
+      renderCell: (params) => {
+        const value = params.value;
+        const status = params.row.status;
+        return value !== null && value !== undefined && value !== "" ? (
+          value
+        ) : status === "Finished" ? (
+          "-"
+        ) : (
+          <span style={{ color: "red" }}>no data</span>
+        );
+      },
     },
     {
       field: "amount",
@@ -432,9 +317,19 @@ const ProjectionDashboard1 = () => {
       minWidth: 120,
       headerAlign: "center",
       align: "center",
-      valueFormatter: (params) =>
-        parseFloat(parseFloat(params.value || 0).toFixed(0)).toLocaleString(),
+      renderCell: (params) => {
+        const value = params.value;
+        const status = params.row.status;
+        return value !== null && value !== undefined && value !== "" ? (
+          parseFloat(value).toLocaleString()
+        ) : status === "Finished" ? (
+          "-"
+        ) : (
+          <span style={{ color: "red" }}>no data</span>
+        );
+      },
     },
+
     {
       field: "Status",
       headerName: "Fee Status",
@@ -515,20 +410,24 @@ const ProjectionDashboard1 = () => {
       minWidth: 100,
       headerAlign: "center",
       align: "center",
-      // renderCell: (params) => (
-      //   <Typography sx={{ fontSize: "12px" }} variant="body2">
-      //     {params?.row?.due_date || (
-      //       <span className="text-red-600 text-[12px]">no date</span>
-      //     )}
-      //   </Typography>
-      // ),
+      renderCell: (params) => {
+        const value = params.value;
+        const status = params.row.status;
+        return value !== null && value !== undefined && value !== "" ? (
+          value
+        ) : status === "Finished" ? (
+          "-"
+        ) : (
+          <span style={{ color: "red" }}>no date</span>
+        );
+      },
     }, // Hide on small screens
     {
       field: "viewProjection",
       headerName: "View Projection",
       width: 150,
       flex: 1,
-      minWidth: 130,
+      minWidth: 100,
       headerAlign: "center",
       align: "center",
       renderCell: (params) => (
@@ -557,77 +456,50 @@ const ProjectionDashboard1 = () => {
   ];
 
   return (
-    <Box sx={{ width: "100%", maxHeight: 450, mt: 10, px: { xs: 3, sm: 1 } }}>
+    <Box sx={{ width: "100%", maxHeight: "100%", px: { xs: 3, sm: 1 } }}>
       {/* Filters */}
-      <div
-        style={{
+      <Box
+        sx={{
           display: "flex",
-          gap: "12px",
+          flexDirection: { xs: "column", sm: "row" }, // Stack on small screens
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 8,
-          flexWrap: "wrap", // Makes it responsive on smaller screens
-          padding: "0px 20px",
+          gap: 2,
+          marginBottom: 3,
+          padding: 2,
+          backgroundColor: cardBg, // Card background for filters/button
+          borderRadius: "8px",
+          boxShadow: "0px 4px 15px rgba(0, 0, 0, 0.2)",
         }}
       >
         <TextField
           label="Search by Name"
-          variant="filled"
-          size="small"
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
+          variant="outlined" // Changed to outlined for consistency
+          size="small"
           sx={{
-            width: "50%",
-            backgroundColor: "#FFFFFF",
-            borderRadius: "8px",
-            boxShadow: "0 1px 4px rgba(0, 0, 0, 0.1)",
-            "& .MuiFilledInput-root": {
-              borderTopLeftRadius: "8px",
-              borderTopRightRadius: "8px",
-              backgroundColor: "#FFFFFF",
-              paddingTop: "6px",
-              paddingBottom: "6px",
-              height: "36px", // adjust height
-              "&:before": {
-                borderBottom: "none", // remove default bottom border
-              },
-              "&:after": {
-                borderBottom: "none", // remove focused bottom border
-              },
+            width: { xs: "100%", sm: "50%" },
+            "& .MuiOutlinedInput-root": {
+              color: textColor,
+              "& fieldset": { borderColor: textColor },
+              "&:hover fieldset": { borderColor: accentColor },
+              "&.Mui-focused fieldset": { borderColor: accentColor },
             },
             "& .MuiInputLabel-root": {
-              fontSize: "12px",
-              top: "-6px",
+              color: textColor,
+            },
+            "& .MuiInputLabel-root.Mui-focused": {
+              color: accentColor,
             },
           }}
         />
 
         <FormControl
           size="small"
-          variant="filled"
+          variant="outlined" // Changed to outlined for consistency
           sx={{
-            width: "20%",
-            backgroundColor: "#FFFFFF",
-            borderRadius: "8px",
-            boxShadow: "0 1px 4px rgba(0, 0, 0, 0.1)",
-            "& .MuiFilledInput-root": {
-              borderTopLeftRadius: "8px",
-              borderTopRightRadius: "8px",
-              backgroundColor: "#FFFFFF",
-              paddingTop: "6px",
-              paddingBottom: "6px",
-              height: "36px", // adjust height
-              "&:before": {
-                borderBottom: "none", // remove default bottom border
-              },
-              "&:after": {
-                borderBottom: "none", // remove focused bottom border
-              },
-            },
-            "& .MuiInputLabel-root": {
-              fontSize: "12px",
-              top: "-6px",
-            },
+            width: { xs: "100%", sm: "30%" },
           }}
         >
           <InputLabel>Status</InputLabel>
@@ -635,6 +507,19 @@ const ProjectionDashboard1 = () => {
             value={filterByStatus}
             onChange={(e) => setFilterByStatus(e.target.value)}
             label="Status"
+            sx={{
+              color: textColor,
+              "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: textColor,
+              },
+              "&:hover .MuiOutlinedInput-notchedOutline": {
+                borderColor: accentColor,
+              },
+              "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                borderColor: accentColor,
+              },
+              "& .MuiSvgIcon-root": { color: textColor }, // Dropdown arrow color
+            }}
           >
             <MenuItem value="">All</MenuItem>
             <MenuItem value="Paid">Paid</MenuItem>
@@ -643,45 +528,57 @@ const ProjectionDashboard1 = () => {
             <MenuItem value="Finished">Completed</MenuItem>
           </Select>
         </FormControl>
-      </div>
+      </Box>
 
       {/* Data Grid */}
       {loading ? (
-        <Box textAlign="center" py={2}>
-          Loading...
+        <Box
+          sx={{
+            height: "400px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
+          <CircularProgress
+            size={40}
+            thickness={4}
+            style={{ color: accentColor }}
+          />{" "}
+          <span style={{ fontSize: "14px", color: "#333" }}>
+            Loading Projections...
+          </span>
         </Box>
       ) : error ? (
         <Box textAlign="center" py={2} color="red">
           {error}
         </Box>
       ) : (
-        <Box sx={{ width: "100%", overflowX: "auto", whiteSpace: "nowrap" }}>
-          <StyledDataGrid
-            rows={filteredStudents}
-            density="compact"
-            columns={columns}
-            pageSize={10}
-            loading={loading}
-            rowsPerPageOptions={[5, 10, 20]}
-            components={{
-              Toolbar: () => (
-                <CustomToolbar
-                  selectedRows={filteredStudents}
-                  // handleExport={handleExport}
-                />
-              ),
-            }}
-            rowHeight={null} // Let row height be dynamic
-            getRowHeight={() => "auto"}
-            sx={{
-              height: "450px",
-              minWidth: "300px",
-              boxShadow: 5,
-              borderRadius: "10px",
-              overflow: "hidden", // Hide internal scrollbars
-            }}
-          />
-        </Box>
+        <StyledDataGrid
+          rows={filteredStudents}
+          density="compact"
+          columns={columns}
+          pageSize={10}
+          loading={loading}
+          rowsPerPageOptions={[5, 10, 20]}
+          components={{
+            Toolbar: () => (
+              <CustomToolbar
+                selectedRows={filteredStudents}
+                // handleExport={handleExport}
+              />
+            ),
+          }}
+          rowHeight={null} // Let row height be dynamic
+          getRowHeight={() => "auto"}
+          sx={{
+            height: "420px", // Adjusted height for consistency
+            minWidth: "300px",
+            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.2)",
+          }}
+        />
       )}
     </Box>
   );

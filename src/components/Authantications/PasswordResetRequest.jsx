@@ -7,7 +7,8 @@ function ForgotPasswordForm() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   // const BASE_URL = "http://127.0.0.1:8000";
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
   const navigate = useNavigate();
   const handleLoginClick = () => {
     navigate("/login"); // Navigate to absolute path

@@ -52,7 +52,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
 import InfoIcon from "@mui/icons-material/Info";
 import WarningIcon from "@mui/icons-material/Warning";
-import { Visibility, Edit, ThumbUp } from "@mui/icons-material";
+import { Visibility, Edit } from "@mui/icons-material";
 import { FaRegThumbsUp } from "react-icons/fa";
 import { AiOutlineIssuesClose } from "react-icons/ai";
 import jsPDF from "jspdf";

@@ -6,7 +6,10 @@ import { DataGrid } from "@mui/x-data-grid";
 const StudentProjections = () => {
   const { id } = useParams();
   const [projections, setProjections] = useState([]);
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
+
+  // const BASE_URL = "http://127.0.0.1:8000";
 
   useEffect(() => {
     const fetchProjections = async () => {

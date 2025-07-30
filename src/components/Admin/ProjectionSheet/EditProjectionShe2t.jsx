@@ -15,8 +15,8 @@ import { useParams, useNavigate } from "react-router-dom";
 const UpdateProjectionForm = () => {
   const { ProjectionsId } = useParams();
   const navigate = useNavigate(); // Initialize the navigate object
-  // const BASE_URL = "http://127.0.0.1:8000";
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL = "http://127.0.0.1:8000";
+  // const BASE_URL = "https://zeenbackend-production.up.railway.app";
   const [formData, setFormData] = useState({
     student: "",
     semester: "",
@@ -74,6 +74,7 @@ const UpdateProjectionForm = () => {
   const [sponsor2Error, setSponsor2Error] = useState(false);
   const [exceedingError, setExceedingError] = useState(false);
   const [totalCommitmentError, setTotalCommitmentError] = useState(false);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 

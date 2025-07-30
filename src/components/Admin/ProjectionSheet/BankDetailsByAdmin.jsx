@@ -52,7 +52,8 @@ const BankAccountDetails = () => {
     }
   }, [navigate]);
   const [StudentId, setStudentId] = useState("");
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  // const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL = "http://127.0.0.1:8000";
   const [studentData, setStudentData] = useState(null);
   const [openModal, setOpenModal] = useState(false);
   const [formData, setFormData] = useState({

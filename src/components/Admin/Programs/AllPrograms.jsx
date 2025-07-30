@@ -1,76 +1,12 @@
 import React, { useState, useEffect } from "react";
-import {
-  DataGrid,
-  GridToolbarColumnsButton,
-  GridToolbarContainer,
-  GridToolbarDensitySelector,
-} from "@mui/x-data-grid";
+import { DataGrid } from "@mui/x-data-grid";
 import styles from "../../Admin/Applications/AllApplication.module.css";
-import { Box, Button, styled, TextField } from "@mui/material";
+import { Box, Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import ConfirmationDialog from "../Applications/ConfirmationDialog";
-import { MdDelete, MdEdit } from "react-icons/md";
-
-// Custom GridToolbar with the "Projection" button
-const CustomToolbar = () => {
-  return (
-    <GridToolbarContainer>
-      <GridToolbarColumnsButton />
-      <GridToolbarDensitySelector />
-    </GridToolbarContainer>
-  );
-};
-
-// Custom styled DataGrid component
-const StyledDataGrid = styled(DataGrid)({
-  "& .MuiDataGrid-columnHeaders": {
-    backgroundColor: "#263238",
-    color: "white",
-    fontSize: "13px",
-    textTransform: "capitalize",
-  },
-  "& .MuiDataGrid-columnHeader": {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    borderLeft: "1px solid white",
-    textAlign: "center",
-    whiteSpace: "normal",
-  },
-  "& .MuiDataGrid-columnHeaderTitle": {
-    whiteSpace: "normal",
-    lineHeight: 1.2,
-    width: "100%",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    textAlign: "center",
-  },
-  "& .MuiDataGrid-cell": {
-    borderLeft: "1px solid #aaa",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    textAlign: "center",
-    whiteSpace: "normal",
-    wordWrap: "break-word",
-    lineHeight: 1.4,
-    padding: "6px",
-    fontSize: "12px",
-  },
-
-  "& .MuiDataGrid-row": {
-    "&:hover": {
-      backgroundColor: "rgba(0, 128, 0, 0.02)",
-    },
-  },
-});
 
 const AllProgramList = () => {
   const [programsList, setProgramsList] = useState([]);
-  const [nameFilter, setNameFilter] = useState("");
-  const [filteredApplications, setFilteredApplications] = useState([]);
-
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false); // State to manage the delete confirmation dialog
   const [deleteId, setDeleteId] = useState(null); // State to store the id of the application to be deleted
   const navigate = useNavigate();
@@ -99,86 +35,37 @@ const AllProgramList = () => {
       .then((data) => {
         // Set the fetched applications to state
         setProgramsList(data);
-        setFilteredApplications(data);
-
-        console.log(data);
       })
       .catch((error) => {
         console.error("Error fetching applications:", error);
       });
   }, []); // Empty dependency array ensures the effect runs only once on component mount
 
-  // Function to filter applications based on selected status
-  useEffect(() => {
-    let filtered = programsList;
-
-    if (nameFilter) {
-      filtered = filtered.filter((app) =>
-        `${app.name}`.toLowerCase().includes(nameFilter.toLowerCase())
-      );
-    }
-
-    setFilteredApplications(filtered);
-  }, [nameFilter]);
-
   const columns = [
     {
-      field: "sno",
-      headerName: "S.No",
-      headerAlign: "center",
-      align: "center",
-      width: 40,
-      sortable: false,
-      filterable: false,
-      renderCell: (params) => {
-        return params.api.getRowIndexRelativeToVisibleRows(params.id) + 1;
-      },
-    },
-    {
       field: "name",
-      headerName: "Program Name",
+      headerName: "PROGRAM NAME",
       flex: 1,
-      minWidth: 250,
-      headerAlign: "center",
-      align: "center",
       // valueGetter: (params) => params.row.student.student_name,
     },
     {
       field: "program_type",
-      headerName: "Program Type",
-      minWidth: 200,
-      headerAlign: "center",
-      align: "center",
-      valueGetter: (params) =>
-        params.row.program_type ? params.row.program_type : null,
+      headerName: "PROGRAM TYPE",
+      flex: 1,
+      // valueGetter: (params) =>
+      // params.row.donor ? params.row.donor.donor_name : null,
     },
-    {
-      field: "duration_in_months",
-      headerName: "Duration In Months",
-      minWidth: 160,
-      headerAlign: "center",
-      align: "center",
-    },
+    { field: "duration_in_months", headerName: "DURATION IN MONTH", flex: 1 },
 
     {
       field: "edit",
-      headerName: "Edit",
-      minWidth: 100,
-      headerAlign: "center",
-      align: "center",
+      headerName: "EDIT",
+      flex: 0.5,
       renderCell: (params) => (
         <Button
           size="small"
           variant="contained"
-          startIcon={<MdEdit size={14} />}
-          sx={{
-            backgroundColor: "#304c49",
-            textTransform: "capitalize", // Optional: keeps "Update" in normal case
-
-            "&:hover": {
-              backgroundColor: "#406c66", // Optional: darker on hover
-            },
-          }}
+          sx={{ backgroundColor: "#304c49" }}
           onClick={() => handleEdit(params.row.id)}
         >
           Edit
@@ -187,26 +74,15 @@ const AllProgramList = () => {
     },
     {
       field: "delete",
-      headerName: "Delete",
-      minWidth: 80,
-      headerAlign: "center",
-      align: "center",
+      headerName: "DELETE",
+      flex: 0.5,
       renderCell: (params) => (
         <Button
-          size="small"
           variant="contained"
-          startIcon={<MdDelete size={14} />}
-          sx={{
-            backgroundColor: "#c41d1d",
-            textTransform: "capitalize", // Optional: keeps "Update" in normal case
-
-            "&:hover": {
-              backgroundColor: "#406c66", // Optional: darker on hover
-            },
-          }}
-          onClick={() => {
-            setDeleteConfirmationOpen(true);
-          }}
+          // color="secondary"
+          sx={{ backgroundColor: "#c41d1d" }}
+          onClick={() => handleDeleteConfirmationOpen(params.row.id)}
+          size="small"
         >
           Delete
         </Button>
@@ -239,32 +115,20 @@ const AllProgramList = () => {
       });
   };
   return (
-    <div style={{ height: 400, width: "99%", paddingTop: "10px" }}>
+    <div style={{ height: 400, width: "99%" }}>
       <Box
         sx={{
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent: "flex-end",
           marginTop: 1,
           width: "99%",
           marginBottom: 1,
-          paddingX: "20px",
         }}
       >
-        {/* Name Filter */}
-        <TextField
-          label="Search by Program Name"
-          variant="outlined"
-          size="small"
-          value={nameFilter}
-          onChange={(e) => setNameFilter(e.target.value)}
-          sx={{ width: "50%" }}
-        />
-
         <Button
           variant="contained"
           sx={{
-            backgroundColor: "#102c59",
-            marginRight: 1,
+            backgroundColor: "#1fb8c3",
           }}
           onClick={handleAddClick}
         >
@@ -272,29 +136,28 @@ const AllProgramList = () => {
         </Button>
       </Box>
 
-      {/* Data Grid */}
-      <Box sx={{ width: "100%", overflowX: "auto" }}>
-        <StyledDataGrid
-          rows={filteredApplications}
-          columns={columns}
-          density="compact"
-          pageSize={10}
-          rowsPerPageOptions={[5, 10, 20]}
-          // loading={loading}
-          components={{
-            Toolbar: () => <CustomToolbar />,
-          }}
-          rowHeight={null} // Let row height be dynamic
-          getRowHeight={() => "auto"}
-          sx={{
-            height: "440px",
-            minWidth: "300px",
-            boxShadow: 5,
-            borderRadius: "10px",
-            overflow: "hidden", // Hide internal scrollbars
-          }}
-        />
-      </Box>
+      <DataGrid
+        rows={programsList}
+        columns={columns}
+        pageSize={5}
+        classes={{
+          columnHeader: styles["custom-datagrid-header"],
+        }}
+        componentsProps={{
+          row: {
+            className: styles["row"],
+          },
+          cell: {
+            style: {
+              // borderBottom: "2px solid #ffffff", // Apply white border at the bottom of each cell
+              // borderRight: "2px solid #ffffff",
+              border: "1px solid #ffffff", // Apply white border at the right of each cell
+            },
+          },
+        }}
+        className={styles["custom-datagrid"]}
+        density="compact"
+      />
 
       {/* Delete confirmation dialog */}
       <ConfirmationDialog

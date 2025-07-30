@@ -33,7 +33,8 @@ const UpdateStatusOfApplicationForm = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [alert, setAlert] = useState(null);
   // const BASE_URL = "http://127.0.0.1:8000";
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
 
   const handleCloseAlert = () => {
     setAlert(null);
@@ -50,9 +51,8 @@ const UpdateStatusOfApplicationForm = () => {
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
   };
-
   const handleBack = () => {
-    navigate(-1);
+    setActiveTab((prevTab) => Math.max(prevTab - 1, 0));
   };
 
   const handleContinue = () => {
@@ -156,9 +156,24 @@ const UpdateStatusOfApplicationForm = () => {
 
     try {
       const formDataToSend = new FormData();
+      const skipIfEmpty = [
+        "email",
+        "health_insurance",
+        "eid_al_adha_gift",
+        "eid_al_fitr_gift",
+        "birthday_gift",
+      ];
 
       // Append all fields to the FormData object
       for (const key in formData) {
+        // **If the key is in skipIfEmpty and its value is empty or null, skip it.**
+        if (
+          skipIfEmpty.includes(key) &&
+          (formData[key] === "" || formData[key] === null)
+        ) {
+          continue;
+        }
+
         if (key === "degree") {
           // Handle degree data separately
           formData[key].forEach((degree, index) => {
@@ -213,90 +228,105 @@ const UpdateStatusOfApplicationForm = () => {
       <Container
         maxWidth="lg"
         sx={{
-          paddingTop: 6,
+          marginTop: 2,
         }}
       >
-        <Paper elevation={3} style={{ padding: 20 }}>
-          <Typography
-            variant="h4"
-            fontWeight={700}
-            className=" text-sky-950"
-            align="center"
-            gutterBottom
-          >
-            Update Status Of Application
+        <Paper elevation={3} style={{ padding: 20, marginBottom: 20 }}>
+          <Typography variant="h4" align="center" gutterBottom>
+            UPDATE STATUS OF APPLICATION
           </Typography>
-
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              marginTop: 1,
+            }}
+          >
+            // Inside the return statement where Tabs are rendered
+            <Tab
+              label="Status & Verification"
+              sx={{
+                backgroundColor: "#12b4bf",
+                // color: "black",
+                borderTopRightRadius: "5px",
+              }}
+            />
+          </Tabs>
           <Box sx={{ maxHeight: "150px" }}>
             <form
               onSubmit={handleSubmit}
               encType="multipart/form-data"
               className="mr-1 h-screen"
             >
-              <Paper style={paperStyle}>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      select
-                      label="Status"
-                      variant="outlined"
-                      name="status"
-                      value={formData.status}
-                      onChange={handleChange}
-                      fullWidth
-                    >
-                      <MenuItem value="Pending">Pending</MenuItem>
-                      <MenuItem value="Accepted">Accepted</MenuItem>
-                      <MenuItem value="Rejected">Rejected</MenuItem>
-                    </TextField>
+              {activeTab === 0 && (
+                <Paper style={paperStyle}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        select
+                        label="Status"
+                        variant="outlined"
+                        name="status"
+                        value={formData.status}
+                        onChange={handleChange}
+                        fullWidth
+                      >
+                        <MenuItem value="Pending">Pending</MenuItem>
+                        <MenuItem value="Accepted">Accepted</MenuItem>
+                        <MenuItem value="Rejected">Rejected</MenuItem>
+                      </TextField>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={formData.verification_required}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                verification_required: e.target.checked,
+                              })
+                            }
+                            name="verification_required"
+                          />
+                        }
+                        label="Verification Required"
+                      />
+                    </Grid>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={formData.verification_required}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              verification_required: e.target.checked,
-                            })
-                          }
-                          name="verification_required"
-                        />
-                      }
-                      label="Verification Required"
-                    />
-                  </Grid>
-                </Grid>
-              </Paper>
+                </Paper>
+              )}
 
               <div
                 style={{
                   marginTop: "0px",
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-end",
+                  alignContent: "end",
                 }}
               >
                 <Button
                   variant="contained"
                   // color="primary"
-                  // disabled={activeTab === 0}
+                  disabled={activeTab === 0}
                   sx={{ backgroundColor: "#14475a" }}
                   onClick={handleBack}
                 >
                   Back
                 </Button>
 
-                <Button
-                  type="submit"
-                  variant="contained"
-                  // color="primary"
-                  style={{ marginLeft: "10px" }}
-                  sx={{ backgroundColor: "#14475a" }}
-                >
-                  Submit
-                </Button>
+                {activeTab === 0 && (
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    // color="primary"
+                    style={{ marginLeft: "10px" }}
+                    sx={{ backgroundColor: "#14475a" }}
+                  >
+                    Submit
+                  </Button>
+                )}
               </div>
             </form>
             /

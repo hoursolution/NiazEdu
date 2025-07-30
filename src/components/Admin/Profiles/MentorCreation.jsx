@@ -9,8 +9,8 @@ const MentorCreation = ({ onClose }) => {
   const navigate = useNavigate();
   const [alert, setAlert] = useState(null);
   // const BASE_URL = "http://127.0.0.1:8000";
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
-
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
   const handleCloseAlert = () => {
     setAlert(null);
   };
@@ -24,9 +24,9 @@ const MentorCreation = ({ onClose }) => {
       });
 
       setTimeout(() => {
-        onClose();
         navigate("/admin/selectMentor");
-      }, 2000); // Navigate after 2 seconds
+        // onClose();
+      }, 1000); // Navigate after 2 seconds
     } catch (error) {
       console.error("Error creating mentor profile:", error);
       console.error("Error data:", error.response.data);

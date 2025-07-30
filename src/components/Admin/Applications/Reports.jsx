@@ -1,86 +1,48 @@
 import React, { useEffect, useState } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import axios from "axios";
-import {
-  Typography,
-  CircularProgress,
-  Button,
-  styled,
-  Box,
-  Dialog,
-} from "@mui/material";
+import { Typography, CircularProgress, Button } from "@mui/material";
 import {
   GridToolbarContainer,
+  GridToolbarFilterButton,
   GridToolbarColumnsButton,
   GridToolbarDensitySelector,
   GridToolbarExport,
 } from "@mui/x-data-grid";
+import * as XLSX from "xlsx";
 
-import ViewReports from "./ViewReports";
-
-// Custom GridToolbar with the "Projection" button
-const CustomToolbar = () => {
-  return (
-    <GridToolbarContainer>
-      <GridToolbarColumnsButton />
-      <GridToolbarDensitySelector />
-      <GridToolbarExport />
-    </GridToolbarContainer>
-  );
-};
-
-// Custom styled DataGrid component
-const StyledDataGrid = styled(DataGrid)({
-  "& .MuiDataGrid-columnHeaders": {
-    backgroundColor: "#263238",
-    color: "white",
-    fontSize: "13px",
-    textTransform: "capitalize",
-  },
-  "& .MuiDataGrid-columnHeader": {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    borderLeft: "1px solid white",
-    textAlign: "center",
-    whiteSpace: "normal",
-  },
-  "& .MuiDataGrid-columnHeaderTitle": {
-    whiteSpace: "normal",
-    lineHeight: 1.2,
-    width: "100%",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    textAlign: "center",
-  },
-  "& .MuiDataGrid-cell": {
-    borderLeft: "1px solid #aaa",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    textAlign: "center",
-    whiteSpace: "normal",
-    wordWrap: "break-word",
-    lineHeight: 1.4,
-    padding: "6px",
-    fontSize: "12px",
-  },
-
-  "& .MuiDataGrid-row": {
-    "&:hover": {
-      backgroundColor: "rgba(0, 128, 0, 0.02)",
-    },
-  },
-});
+const CustomToolbar = ({ selectedRows, handleExport }) => (
+  <GridToolbarContainer
+    style={{ display: "flex", justifyContent: "space-between" }}
+  >
+    <div>
+      <GridToolbarFilterButton sx={{ color: "#14475a" }} />
+      <GridToolbarColumnsButton sx={{ color: "#14475a" }} />
+      <GridToolbarDensitySelector sx={{ color: "#14475a" }} />
+      <GridToolbarExport sx={{ color: "#14475a" }} />
+    </div>
+    {/* <Button
+      sx={{
+        backgroundColor: selectedRows.length > 0 ? "#14475a" : "#cccccc",
+        color: "#ffffff",
+        fontWeight: 600,
+        padding: "5px 15px",
+        "&:hover": {
+          backgroundColor: selectedRows.length > 0 ? "#0f3c4a" : "#cccccc",
+        },
+      }}
+      disabled={selectedRows.length === 0}
+      onClick={handleExport}
+    >
+      Export Selected
+    </Button> */}
+  </GridToolbarContainer>
+);
 
 const Reports = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRows, setSelectedRows] = useState([]);
-  const [addMentorDialogOpen, setAddMentorDialogOpen] = useState(false);
-  const [viewHousehold, setHousehold] = useState("");
-  const [viewPersonalDetails, setPersonalDetails] = useState("");
 
   // Fetch data from the API
   useEffect(() => {
@@ -99,487 +61,102 @@ const Reports = () => {
     fetchApplications();
   }, []);
 
-  const handleViewDetails = (value) => {
-    console.log(value);
-    setHousehold(value?.row?.description_of_household);
-    setPersonalDetails(value?.row?.personal_statement);
-    setAddMentorDialogOpen(true);
-  };
-
-  const handleAddMentorDialogClose = () => {
-    setAddMentorDialogOpen(false);
-  };
-
   // / Define the columns for the DataGrid
   const columns = [
-    {
-      field: "sno",
-      headerName: "S.No",
-      headerAlign: "center",
-      align: "center",
-      width: 40,
-      sortable: false,
-      filterable: false,
-      renderCell: (params) => {
-        return params.api.getRowIndexRelativeToVisibleRows(params.id) + 1;
-      },
-    },
-    {
-      field: "profile_picture",
-      headerName: "Profile Picture",
-      flex: 1,
-      minWidth: 160,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => (
-        <img
-          src={params.row.profile_picture}
-          alt="Profile"
-          style={{ width: 80, height: 80, borderRadius: "50%" }}
-        />
-      ),
-    },
+    // { field: "id", headerName: "ID", width: 70 },
     {
       field: "name",
       headerName: "Name",
-      flex: 1,
-      minWidth: 160,
-      headerAlign: "center",
-      align: "center",
+      width: 150,
       valueGetter: (params) =>
         `${params.row.name || ""} ${params.row.last_name || ""}`,
     },
-    {
-      field: "father_name",
-      headerName: "Father Name",
-      flex: 1,
-      minWidth: 160,
-      headerAlign: "center",
-      align: "center",
-    },
-    {
-      field: "gender",
-      headerName: "Gender",
-      flex: 1,
-      minWidth: 80,
-      headerAlign: "center",
-      align: "center",
-    },
-    {
-      field: "date_of_birth",
-      headerName: "Date of Birth",
-      flex: 1,
-      minWidth: 100,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => {
-        const rawDate = params?.row?.date_of_birth;
-
-        const formattedDate = rawDate
-          ? new Date(rawDate).toLocaleDateString("en-GB") // 'en-GB' gives dd/mm/yyyy format
-          : null;
-
-        return (
-          <Typography sx={{ fontSize: "12px" }} variant="body2">
-            {formattedDate || (
-              <span className="text-red-600 text-[12px]">no date</span>
-            )}
-          </Typography>
-        );
-      },
-    },
-    {
-      field: "age",
-      headerName: "Age",
-      flex: 1,
-      minWidth: 60,
-      headerAlign: "center",
-      align: "center",
-    },
-    {
-      field: "country",
-      headerName: "Country",
-      flex: 1,
-      minWidth: 80,
-      headerAlign: "center",
-      align: "center",
-    },
-    {
-      field: "province",
-      headerName: "Province",
-      flex: 1,
-      minWidth: 120,
-      headerAlign: "center",
-      align: "center",
-    },
-    {
-      field: "city",
-      headerName: "City",
-      flex: 1,
-      minWidth: 100,
-      headerAlign: "center",
-      align: "center",
-    },
-    {
-      field: "city_of_origin",
-      headerName: "City of Origin",
-      flex: 1,
-      minWidth: 120,
-      headerAlign: "center",
-      align: "center",
-    },
-    {
-      field: "mobile_no",
-      headerName: "Mobile No",
-      flex: 1,
-      minWidth: 100,
-      headerAlign: "center",
-      align: "center",
-    },
-    {
-      field: "cnic_or_b_form",
-      headerName: "CNIC/B-Form",
-      flex: 1,
-      minWidth: 120,
-      headerAlign: "center",
-      align: "center",
-    },
-    {
-      field: "email",
-      headerName: "Email",
-      flex: 1,
-      minWidth: 200,
-      headerAlign: "center",
-      align: "center",
-    },
-    {
-      field: "village",
-      headerName: "Village",
-      flex: 1,
-      minWidth: 120,
-      headerAlign: "center",
-      align: "center",
-    },
-    {
-      field: "address",
-      headerName: "Address",
-      flex: 1,
-      minWidth: 160,
-      headerAlign: "center",
-      align: "center",
-    },
+    { field: "father_name", headerName: "Father Name", width: 150 },
+    { field: "gender", headerName: "Gender", width: 100 },
+    { field: "date_of_birth", headerName: "Date of Birth", width: 130 },
+    { field: "age", headerName: "Age", width: 70 },
+    { field: "country", headerName: "Country", width: 130 },
+    { field: "province", headerName: "Province", width: 130 },
+    { field: "city", headerName: "City", width: 130 },
+    { field: "city_of_origin", headerName: "City of Origin", width: 150 },
+    { field: "mobile_no", headerName: "Mobile No", width: 130 },
+    { field: "cnic_or_b_form", headerName: "CNIC/B-Form", width: 150 },
+    { field: "email", headerName: "Email", width: 200 },
+    { field: "village", headerName: "Village", width: 150 },
+    { field: "address", headerName: "Address", width: 200 },
     {
       field: "current_level_of_education",
       headerName: "Current Level of Education",
-      flex: 1,
-      minWidth: 160,
-      headerAlign: "center",
-      align: "center",
+      width: 200,
     },
     {
       field: "institution_interested_in",
       headerName: "Institution Interested In",
-      flex: 1,
-      minWidth: 160,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => (
-        <span style={{ color: !params.value ? "red" : "inherit" }}>
-          {params.value || "no data"}
-        </span>
-      ),
+      width: 200,
     },
     {
       field: "program",
       headerName: "Program Interested In",
-      flex: 1,
-      minWidth: 150,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => {
-        const value = params.row.program_interested_in?.name;
-        return (
-          <span style={{ color: !value ? "red" : "inherit" }}>
-            {value || "no data"}
-          </span>
-        );
-      },
+      width: 250,
+      valueGetter: (params) => params.row.program_interested_in?.name || "N/A",
     },
     {
       field: "admission_fee_of_the_program",
       headerName: "Admission Fee",
-      flex: 1,
-      minWidth: 120,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => (
-        <span style={{ color: !params.value ? "red" : "inherit" }}>
-          {parseFloat(
-            parseFloat(params.value || 0).toFixed(0)
-          ).toLocaleString() || "no data"}
-        </span>
-      ),
+      width: 150,
     },
     {
       field: "total_fee_of_the_program",
       headerName: "Total Fee",
-      flex: 1,
-      minWidth: 120,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => (
-        <span style={{ color: !params.value ? "red" : "inherit" }}>
-          {parseFloat(
-            parseFloat(params.value || 0).toFixed(0)
-          ).toLocaleString() || "no data"}
-        </span>
-      ),
+      width: 150,
     },
-    {
-      field: "living_expenses",
-      headerName: "Living Expenses",
-      flex: 1,
-      minWidth: 120,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => (
-        <span style={{ color: !params.value ? "red" : "inherit" }}>
-          {parseFloat(
-            parseFloat(params.value || 0).toFixed(0)
-          ).toLocaleString() || "no data"}
-        </span>
-      ),
-    },
+    { field: "living_expenses", headerName: "Living Expenses", width: 150 },
     {
       field: "food_and_necessities_expenses",
       headerName: "Food & Necessities",
-      flex: 1,
-      minWidth: 120,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => (
-        <span style={{ color: !params.value ? "red" : "inherit" }}>
-          {parseFloat(
-            parseFloat(params.value || 0).toFixed(0)
-          ).toLocaleString() || "no data"}
-        </span>
-      ),
+      width: 200,
     },
-    {
-      field: "transport_amount",
-      headerName: "Transport Amount",
-      flex: 1,
-      minWidth: 120,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => (
-        <span style={{ color: !params.value ? "red" : "inherit" }}>
-          {parseFloat(
-            parseFloat(params.value || 0).toFixed(0)
-          ).toLocaleString() || "no data"}
-        </span>
-      ),
-    },
-    {
-      field: "other_amount",
-      headerName: "Other Amount",
-      flex: 1,
-      minWidth: 120,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => (
-        <span style={{ color: !params.value ? "red" : "inherit" }}>
-          {parseFloat(
-            parseFloat(params.value || 0).toFixed(0)
-          ).toLocaleString() || "no data"}
-        </span>
-      ),
-    },
+    { field: "transport_amount", headerName: "Transport Amount", width: 150 },
+    { field: "other_amount", headerName: "Other Amount", width: 150 },
     {
       field: "expected_sponsorship_amount",
       headerName: "Expected Sponsorship Amount",
-      flex: 1,
-      minWidth: 160,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => (
-        <span style={{ color: !params.value ? "red" : "inherit" }}>
-          {parseFloat(
-            parseFloat(params.value || 0).toFixed(0)
-          ).toLocaleString() || "no data"}
-        </span>
-      ),
+      width: 150,
     },
     {
       field: "total_members_of_household",
       headerName: "Household Members",
-      flex: 1,
-      minWidth: 100,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => (
-        <span style={{ color: !params.value ? "red" : "inherit" }}>
-          {parseFloat(
-            parseFloat(params.value || 0).toFixed(0)
-          ).toLocaleString() || "no data"}
-        </span>
-      ),
+      width: 150,
     },
-    {
-      field: "members_earning",
-      headerName: "Earning Members",
-      flex: 1,
-      minWidth: 100,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => (
-        <span style={{ color: !params.value ? "red" : "inherit" }}>
-          {parseFloat(
-            parseFloat(params.value || 0).toFixed(0)
-          ).toLocaleString() || "no data"}
-        </span>
-      ),
-    },
-    {
-      field: "income_per_month",
-      headerName: "Income Per Month",
-      flex: 1,
-      minWidth: 100,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => (
-        <span style={{ color: !params.value ? "red" : "inherit" }}>
-          {parseFloat(
-            parseFloat(params.value || 0).toFixed(0)
-          ).toLocaleString() || "no data"}
-        </span>
-      ),
-    },
-    {
-      field: "expense_per_month",
-      headerName: "Expense Per Month",
-      flex: 1,
-      minWidth: 100,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => (
-        <span style={{ color: !params.value ? "red" : "inherit" }}>
-          {parseFloat(
-            parseFloat(params.value || 0).toFixed(0)
-          ).toLocaleString() || "no data"}
-        </span>
-      ),
-    },
-    // {
-    //   field: "description_of_household",
-    //   headerName: "Household Description",
-    //   flex: 1,
-    //   minWidth: 160,
-    //   headerAlign: "center",
-    //   align: "center",
-    // },
-    // {
-    //   field: "personal_statement",
-    //   headerName: "Personal Statement",
-    //   width: 400,
-    // },
+    { field: "members_earning", headerName: "Earning Members", width: 150 },
+    { field: "income_per_month", headerName: "Income Per Month", width: 150 },
+    { field: "expense_per_month", headerName: "Expense Per Month", width: 150 },
     {
       field: "description_of_household",
-      headerName: "View Household & Personal Statement",
-      minWidth: 150,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => {
-        let bgColor = "#2196F3"; // default gray
-
-        return (
-          <Button
-            sx={{
-              backgroundColor: bgColor,
-              color: "#fff",
-              px: "2px",
-              py: 0.5,
-              borderRadius: 1,
-              textAlign: "center",
-              width: "60%",
-              fontSize: "12px",
-              fontWeight: 600,
-              textTransform: "capitalize",
-            }}
-            onClick={() => handleViewDetails(params)}
-          >
-            View Details
-          </Button>
-        );
-      },
+      headerName: "Household Description",
+      width: 300,
+    },
+    {
+      field: "personal_statement",
+      headerName: "Personal Statement",
+      width: 400,
     },
     {
       field: "status",
       headerName: "Application Status",
-      minWidth: 100,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => {
-        const status = params.value?.toLowerCase();
-
-        let bgColor = "#9E9E9E"; // default gray
-
-        switch (status) {
-          case "accepted":
-            bgColor = "#4CAF50"; // green
-            break;
-          case "pending":
-            bgColor = "#2196F3"; // blue
-            break;
-          case "rejected":
-            bgColor = "#F44336"; // red
-            break;
-          default:
-            break;
-        }
-
-        return (
-          <Box
-            sx={{
-              backgroundColor: bgColor,
-              color: "#fff",
-              px: "2px",
-              py: 0.5,
-              borderRadius: 1,
-              textAlign: "center",
-              width: "100%",
-              fontSize: "12px",
-              fontWeight: 600,
-              textTransform: "capitalize",
-            }}
-          >
-            {params.value}
-          </Box>
-        );
-      },
+      width: 150,
     },
     {
       field: "verification_required",
       headerName: "Verification Required",
-      minWidth: 100,
-      headerAlign: "center",
-      align: "center",
-      renderCell: (params) => (
-        <span
-          style={{
-            color: params.row?.verification_required === true ? "green" : "red",
-          }}
-        >
-          {params.row.verification_required ? "Yes" : "No"}
-        </span>
-      ),
+      width: 150,
+      valueGetter: (params) =>
+        params.row.verification_required ? "Yes" : "No",
     },
     {
       field: "degrees",
       headerName: "Degrees",
-      minWidth: 160,
-      headerAlign: "center",
-      align: "center",
+      width: 400,
       valueGetter: (params) =>
         params.row.degree
           ?.map(
@@ -590,6 +167,18 @@ const Reports = () => {
           )
           .join("; ") || "No degrees",
     },
+    {
+      field: "profile_picture",
+      headerName: "Profile Picture",
+      width: 300,
+      renderCell: (params) => (
+        <img
+          src={params.row.profile_picture}
+          alt="Profile"
+          style={{ width: 50, height: 50, borderRadius: "50%" }}
+        />
+      ),
+    },
   ];
   // Prepare rows for the DataGrid
   const rows = applications.map((application) => ({
@@ -597,8 +186,19 @@ const Reports = () => {
     id: application.id,
   }));
 
+  // Export selected rows to Excel
+  const handleExport = () => {
+    const dataToExport = selectedRows.map((rowId) =>
+      applications.find((application) => application.id === rowId)
+    );
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "SelectedRows");
+    XLSX.writeFile(workbook, "SelectedApplications.xlsx");
+  };
+
   return (
-    <div style={{ width: "100%" }}>
+    <div style={{ height: 600, width: "100%" }}>
       <Typography
         variant="h4"
         align="center"
@@ -613,46 +213,197 @@ const Reports = () => {
           <CircularProgress />
         </div>
       ) : (
-        //  {/* Data Grid */}
-        <Box sx={{ width: "100%", overflowX: "auto" }}>
-          <StyledDataGrid
-            rows={rows}
-            columns={columns}
-            density="compact"
-            pageSize={10}
-            rowsPerPageOptions={[5, 10, 20]}
-            // loading={loading}
-            components={{
-              Toolbar: () => <CustomToolbar />,
-            }}
-            rowHeight={null} // Let row height be dynamic
-            getRowHeight={() => "auto"}
-            sx={{
-              height: "470px",
-              minWidth: "300px",
-              boxShadow: 5,
+        <DataGrid
+          rows={rows}
+          columns={columns}
+          pageSize={10}
+          rowsPerPageOptions={[10, 20, 50]}
+          checkboxSelection
+          onSelectionModelChange={(newSelectionModel) => {
+            console.log("Selected Rows:", newSelectionModel); // Debug log
+            setSelectedRows(newSelectionModel);
+          }}
+          components={{
+            Toolbar: () => (
+              <CustomToolbar
+                selectedRows={selectedRows}
+                handleExport={handleExport}
+              />
+            ),
+          }}
+          sx={{
+            "& .MuiDataGrid-root": {
+              border: "1px solid #ddd",
               borderRadius: "10px",
-              overflow: "hidden", // Hide internal scrollbars
-            }}
-          />
-        </Box>
-      )}
-
-      {/* add mentor */}
-      <Dialog
-        fullWidth // Expands to maxWidth
-        maxWidth="md"
-        open={addMentorDialogOpen}
-        onClose={handleAddMentorDialogClose}
-      >
-        <ViewReports
-          onClose={handleAddMentorDialogClose}
-          viewHousehold={viewHousehold}
-          viewPersonalDetails={viewPersonalDetails}
+              overflow: "hidden",
+            },
+            "& .MuiDataGrid-columnHeaders": {
+              backgroundColor: "#14475a",
+              color: "#ffffff",
+              fontSize: "16px",
+              fontWeight: 700,
+              textAlign: "center",
+            },
+            "& .MuiDataGrid-columnHeaderTitle": {
+              fontWeight: 600,
+            },
+            "& .MuiDataGrid-cell": {
+              fontSize: "14px",
+              color: "#333333",
+              borderBottom: "1px solid #f0f0f0",
+            },
+            "& .MuiDataGrid-row": {
+              "&:nth-of-type(odd)": {
+                backgroundColor: "#f9f9f9",
+              },
+              "&:hover": {
+                backgroundColor: "#e6f7ff",
+              },
+            },
+            "& .MuiCheckbox-root": {
+              color: "#14475a !important",
+            },
+            "& .MuiDataGrid-selectedRowCount": {
+              display: "none",
+            },
+            "& .MuiDataGrid-footerContainer": {
+              backgroundColor: "#f1f1f1",
+              padding: "10px 0",
+            },
+            "& .MuiDataGrid-row.Mui-selected": {
+              backgroundColor: "#d6eaff !important",
+            },
+            "& .MuiDataGrid-pagination": {
+              color: "#14475a",
+            },
+            "& .MuiDataGrid-toolbarContainer": {
+              backgroundColor: "#eaf5ff",
+              borderBottom: "1px solid #ddd",
+              padding: "5px 10px",
+            },
+          }}
         />
-      </Dialog>
+      )}
     </div>
   );
 };
 
 export default Reports;
+// Define the columns for the DataGrid
+// const columns = [
+//   // { field: "id", headerName: "ID", width: 70 },
+//   {
+//     field: "name",
+//     headerName: "Name",
+//     width: 150,
+//     valueGetter: (params) =>
+//       `${params.row.name || ""} ${params.row.last_name || ""}`,
+//   },
+//   { field: "father_name", headerName: "Father Name", width: 150 },
+//   { field: "gender", headerName: "Gender", width: 100 },
+//   { field: "date_of_birth", headerName: "Date of Birth", width: 130 },
+//   { field: "age", headerName: "Age", width: 70 },
+//   { field: "country", headerName: "Country", width: 130 },
+//   { field: "province", headerName: "Province", width: 130 },
+//   { field: "city", headerName: "City", width: 130 },
+//   { field: "city_of_origin", headerName: "City of Origin", width: 150 },
+//   { field: "mobile_no", headerName: "Mobile No", width: 130 },
+//   { field: "cnic_or_b_form", headerName: "CNIC/B-Form", width: 150 },
+//   { field: "email", headerName: "Email", width: 200 },
+//   { field: "village", headerName: "Village", width: 150 },
+//   { field: "address", headerName: "Address", width: 200 },
+//   {
+//     field: "current_level_of_education",
+//     headerName: "Current Level of Education",
+//     width: 200,
+//   },
+//   {
+//     field: "institution_interested_in",
+//     headerName: "Institution Interested In",
+//     width: 200,
+//   },
+//   {
+//     field: "program",
+//     headerName: "Program Interested In",
+//     width: 250,
+//     valueGetter: (params) => params.row.program_interested_in?.name || "N/A",
+//   },
+//   {
+//     field: "admission_fee_of_the_program",
+//     headerName: "Admission Fee",
+//     width: 150,
+//   },
+//   {
+//     field: "total_fee_of_the_program",
+//     headerName: "Total Fee",
+//     width: 150,
+//   },
+//   { field: "living_expenses", headerName: "Living Expenses", width: 150 },
+//   {
+//     field: "food_and_necessities_expenses",
+//     headerName: "Food & Necessities",
+//     width: 200,
+//   },
+//   { field: "transport_amount", headerName: "Transport Amount", width: 150 },
+//   { field: "other_amount", headerName: "Other Amount", width: 150 },
+//   {
+//     field: "expected_sponsorship_amount",
+//     headerName: "Expected Sponsorship Amount",
+//     width: 150,
+//   },
+//   {
+//     field: "total_members_of_household",
+//     headerName: "Household Members",
+//     width: 150,
+//   },
+//   { field: "members_earning", headerName: "Earning Members", width: 150 },
+//   { field: "income_per_month", headerName: "Income Per Month", width: 150 },
+//   { field: "expense_per_month", headerName: "Expense Per Month", width: 150 },
+//   {
+//     field: "description_of_household",
+//     headerName: "Household Description",
+//     width: 300,
+//   },
+//   {
+//     field: "personal_statement",
+//     headerName: "Personal Statement",
+//     width: 400,
+//   },
+//   {
+//     field: "status",
+//     headerName: "Application Status",
+//     width: 150,
+//   },
+//   {
+//     field: "verification_required",
+//     headerName: "Verification Required",
+//     width: 150,
+//     valueGetter: (params) => (params.row.verification_required ? "Yes" : "No"),
+//   },
+//   {
+//     field: "degrees",
+//     headerName: "Degrees",
+//     width: 400,
+//     valueGetter: (params) =>
+//       params.row.degree
+//         ?.map(
+//           (degree) =>
+//             `${degree.degree_name} (${degree.grade || "N/A"} - ${
+//               degree.status || "N/A"
+//             })`
+//         )
+//         .join("; ") || "No degrees",
+//   },
+//   {
+//     field: "profile_picture",
+//     headerName: "Profile Picture",
+//     width: 300,
+//     renderCell: (params) => (
+//       <img
+//         src={params.row.profile_picture}
+//         alt="Profile"
+//         style={{ width: 50, height: 50, borderRadius: "50%" }}
+//       />
+//     ),
+//   },
+// ];

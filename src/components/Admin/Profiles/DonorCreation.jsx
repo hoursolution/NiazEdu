@@ -8,8 +8,10 @@ import MuiAlert from "@mui/material/Alert";
 const DonorCreation = ({ onClose }) => {
   const navigate = useNavigate();
   const [alert, setAlert] = useState(null);
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+
   // const BASE_URL = "http://127.0.0.1:8000";
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
 
   const handleCloseAlert = () => {
     setAlert(null);
@@ -23,7 +25,7 @@ const DonorCreation = ({ onClose }) => {
       });
       setTimeout(() => {
         onClose();
-        navigate("/admin/selectDentor");
+        navigate("/admin/selectDonor");
       }, 2000); // Navigate after 2 seconds
     } catch (error) {
       console.error("Error creating Donor profile:", error);

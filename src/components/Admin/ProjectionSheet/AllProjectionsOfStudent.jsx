@@ -54,8 +54,8 @@ const AllProjectionsOfStudent = () => {
   const [studentData, setStudentData] = useState(null);
   const [projections, setProjections] = useState([]);
   const [refreshFlag, setRefreshFlag] = useState(false); // Step 1: Define state variable
-  // const BASE_URL = "http://127.0.0.1:8000";
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL = "http://127.0.0.1:8000";
+  // const BASE_URL = "https://zeenbackend-production.up.railway.app";
   useEffect(() => {
     // Step 2: Fetch projections based on refreshFlag
     if (refreshFlag) {

@@ -5,29 +5,67 @@ import {
   Grid,
   Paper,
   MenuItem,
-  InputLabel,
   Container,
   Typography,
   Box,
+  CircularProgress,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
+import { styled } from "@mui/system";
+
+// --- Modern Color Palette & Theme Variables ---
+const colors = {
+  primary: "#0f75bd",
+  secondary: "#6c757d",
+  accent: "#20ace0",
+  backgroundLight: "#f8f9fa",
+  paperBackground: "#ffffff",
+  textPrimary: "#343a40",
+  textSecondary: "#6c757d",
+  border: "#ced4da",
+  hoverLight: "#e9ecef",
+  error: "#D32F2F",
+};
+
+// --- Styled Components for Animations and Modern Look ---
+const AnimatedPaper = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(4),
+  marginBottom: theme.spacing(4),
+  borderRadius: theme.shape.borderRadius * 2,
+  background: `linear-gradient(145deg, ${colors.paperBackground}, #f0f2f5)`,
+  boxShadow: `0px 10px 30px rgba(0, 0, 0, 0.08), 0px 4px 12px rgba(0, 0, 0, 0.05)`,
+  transition: "transform 0.4s ease-in-out, box-shadow 0.4s ease-in-out",
+  "&:hover": {
+    transform: "translateY(-8px)",
+    boxShadow: `0px 15px 40px rgba(0, 0, 0, 0.12), 0px 6px 18px rgba(0, 0, 0, 0.08)`,
+  },
+}));
 
 const EditVerificationForm = () => {
   const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
   // const BASE_URL = "http://127.0.0.1:8000";
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
-  const { verificationId } = useParams(); // Get the verification ID from the URL
+  const { verificationId } = useParams();
+  const [loading, setLoading] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
 
   const [verificationData, setVerificationData] = useState({
     verifier_name: "",
     verifier_email: "",
     verifier_contact: "",
+    verification_date: "",
     verification_method: "",
     recommendation: "",
     move_for_interview: "-",
     application: null,
   });
+
   const [formErrors, setFormErrors] = useState({});
 
   const handleChange = (e) => {
@@ -36,275 +74,446 @@ const EditVerificationForm = () => {
     setFormErrors({ ...formErrors, [name]: "" });
   };
 
-  useEffect(() => {
-    // Fetch applications from the API
-    fetch(`${BASE_URL}/all-applications/`)
-      .then((response) => response.json())
-      .then((data) => {
-        // Set the fetched applications to state
-        setApplications(data);
-      })
-      .catch((error) => {
-        console.error("Error fetching applications:", error);
-      });
-  }, []);
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    const errors = validateField(name, value);
+    setFormErrors((prevErrors) => ({ ...prevErrors, ...errors }));
+  };
 
   useEffect(() => {
-    // Fetch the verification data by ID
+    // Fetch applications
+    fetch(`${BASE_URL}/all-applications/`)
+      .then((response) => response.json())
+      .then((data) => setApplications(data))
+      .catch((error) => {
+        console.error("Error fetching applications:", error);
+        showSnackbar("Failed to load applications.", "error");
+      });
+
+    // Fetch verification data
     fetch(`${BASE_URL}/api/verifications/${verificationId}/`)
       .then((response) => response.json())
-      .then((data) => {
-        // Set the fetched verification data to state
-        setVerificationData(data);
-      })
+      .then((data) => setVerificationData(data))
       .catch((error) => {
         console.error("Error fetching verification data:", error);
+        showSnackbar("Failed to load verification data.", "error");
       });
-  }, [verificationId]); // Fetch data when the verification ID changes
+  }, [verificationId]);
+
+  const showSnackbar = (message, severity) => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const errors = validateForm(verificationData);
+    setFormErrors(errors);
+
     if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
+      const firstErrorField = Object.keys(errors)[0];
+      const element = document.getElementsByName(firstErrorField)[0];
+      if (element)
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+      showSnackbar("Please correct the errors in the form.", "error");
       return;
     }
+
+    setLoading(true);
     try {
       const response = await fetch(
-        `${BASE_URL}/api/verifications/update/${verificationId}/`, // Use the API endpoint for updating verifications
+        `${BASE_URL}/api/verifications/update/${verificationId}/`,
         {
-          method: "PUT", // Use PUT method for updating data
-          headers: {
-            "Content-Type": "application/json",
-          },
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(verificationData),
         }
       );
+
       if (response.ok) {
-        console.log("Successfully updated verification");
-        navigate("/Admin/allVarification"); // Navigate to verification list page after successful update
+        showSnackbar("Verification updated successfully!", "success");
+        setTimeout(() => navigate("/Admin/allVarification"), 1500);
       } else {
-        const errorMessage = await response.json();
-        console.error("Failed to update verification:", errorMessage);
+        const errorData = await response.json();
+        const message = errorData.detail || "Failed to update verification";
+        showSnackbar(message, "error");
       }
     } catch (error) {
+      showSnackbar("Error updating verification. Please try again.", "error");
       console.error("Error updating verification:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Function to validate form fields
-  const validateForm = (formData) => {
+  // Validation functions (same as AddVerification)
+  const validateField = (name, value) => {
     const errors = {};
-    // Validate each field and set error messages if validation fails
-    if (!formData.verifier_name.trim()) {
-      errors.verifier_name = "Verifier name is required";
+    switch (name) {
+      case "verifier_name":
+        if (!value.trim()) errors.verifier_name = "Verifier name is required";
+        break;
+      // case "verifier_email":
+      //   if (!value.trim()) {
+      //     errors.verifier_email = "Verifier email is required";
+      //   } else if (!isValidEmail(value)) {
+      //     errors.verifier_email = "Invalid email format";
+      //   }
+      //   break;
+      case "verifier_contact":
+        if (!value.trim()) {
+          errors.verifier_contact = "Verifier contact is required";
+        } else if (!isValidPhoneNumber(value)) {
+          errors.verifier_contact = "Invalid phone number format (1-16 digits)";
+        }
+        break;
+      case "verification_method":
+        if (!value.trim())
+          errors.verification_method = "Verification method is required";
+        break;
+      case "recommendation":
+        if (!value.trim()) errors.recommendation = "Recommendation is required";
+        break;
+      case "verification_date":
+        if (!value) errors.verification_date = "Verification date is required";
+        break;
+      default:
+        break;
     }
-    if (!formData.verifier_email.trim()) {
-      errors.verifier_email = "Verifier email is required";
-    } else if (!isValidEmail(formData.verifier_email)) {
-      errors.verifier_email = "Invalid email format";
-    }
-    if (!formData.verifier_contact.trim()) {
-      errors.verifier_contact = "Verifier contact is required";
-    } else if (!isValidPhoneNumber(formData.verifier_contact)) {
-      errors.verifier_contact = "Invalid phone number format";
-    }
-    if (!formData.verification_method.trim()) {
-      errors.verification_method = "Verification method is required";
-    }
-    if (!formData.recommendation.trim()) {
-      errors.recommendation = "Recommendation is required";
-    }
-    // Add validation for other fields as needed
     return errors;
   };
 
-  // Function to validate email format
-  const isValidEmail = (email) => {
-    // Implement email validation logic
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const validateForm = (formData) => {
+    return {
+      ...validateField("verifier_name", formData.verifier_name),
+      // ...validateField("verifier_email", formData.verifier_email),
+      ...validateField("verifier_contact", formData.verifier_contact),
+      ...validateField("verification_method", formData.verification_method),
+      ...validateField("recommendation", formData.recommendation),
+      ...validateField("verification_date", formData.verification_date),
+    };
   };
 
-  // Function to validate phone number format
-  const isValidPhoneNumber = (phoneNumber) => {
-    return /^\d{1,16}$/.test(phoneNumber); // Allows 1 to 16 digits
-  };
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidPhoneNumber = (phone) => /^\d{1,16}$/.test(phone);
+
+  const handleSnackbarClose = () => setSnackbarOpen(false);
+
   return (
     <Container
       maxWidth="md"
       sx={{
-        marginTop: 2,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        height: "100vh", // Fill viewport height
+        overflow: "hidden",
+        paddingTop: 2,
+        paddingBottom: 6,
       }}
     >
-      <Paper elevation={3} style={{ padding: 20, marginBottom: 20 }}>
-        <Typography
-          variant="h4"
-          fontWeight={700}
-          className=" text-sky-950"
-          align="center"
-          gutterBottom
+      <Box
+        sx={{
+          flex: 1,
+        }}
+      >
+        <Box
+          sx={{
+            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.1)", // light elegant shadow
+            borderRadius: "12px",
+            backgroundColor: "#fff", // ensure background is white for proper shadow
+            paddingX: 3,
+            paddingBottom: "4px",
+          }}
         >
-          Edit Verification
-        </Typography>
-        <form onSubmit={handleSubmit}>
-          <Box sx={{ maxHeight: "calc(100vh - 200px)", overflow: "auto" }}>
-            <Grid container spacing={2} sx={{ marginTop: 1 }}>
-              <Grid item xs={12} sm={6}>
-                <InputLabel shrink>Application</InputLabel>
-                <TextField
-                  select
-                  // label="Select Application"
-                  variant="outlined"
-                  name="application"
-                  value={verificationData.application}
-                  onChange={handleChange}
-                  fullWidth
-                  required
-                  InputProps={{
-                    readOnly: true,
-                  }} // Make the field required
-                  error={!!formErrors.application} // Set error state based on formErrors
-                  helperText={formErrors.application} // Display error message if exists
-                >
-                  {applications.map((application) => (
-                    <MenuItem key={application.id} value={application.id}>
-                      {application.name} {application.last_name}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <InputLabel shrink>Verifier name</InputLabel>
-                <TextField
-                  // label="Verifier name"
-                  variant="outlined"
-                  name="verifier_name"
-                  value={verificationData.verifier_name}
-                  onChange={handleChange}
-                  fullWidth
-                  required
-                  error={!!formErrors.verifier_name}
-                  helperText={formErrors.verifier_name}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Verifier Email"
-                  type="email"
-                  variant="outlined"
-                  name="verifier_email"
-                  value={verificationData.verifier_email}
-                  onChange={handleChange}
-                  fullWidth
-                  required
-                  error={!!formErrors.verifier_email}
-                  helperText={formErrors.verifier_email}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Verifier Contact"
-                  variant="outlined"
-                  name="verifier_contact"
-                  value={verificationData.verifier_contact}
-                  onChange={handleChange}
-                  fullWidth
-                  required
-                  error={!!formErrors.verifier_contact}
-                  helperText={formErrors.verifier_contact}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <InputLabel shrink>Verification Date</InputLabel>
-                <TextField
-                  type="date"
-                  variant="outlined"
-                  name="verification_date"
-                  value={verificationData.verification_date}
-                  onChange={handleChange}
-                  fullWidth
-                  required
-                  error={!!formErrors.verification_date}
-                  helperText={formErrors.verification_date}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="Verification Method"
-                  variant="outlined"
-                  name="verification_method"
-                  multiline
-                  rows={3}
-                  value={verificationData.verification_method}
-                  onChange={handleChange}
-                  fullWidth
-                  required
-                  error={!!formErrors.verification_method}
-                  helperText={formErrors.verification_method}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="Recommendation"
-                  variant="outlined"
-                  name="recommendation"
-                  multiline
-                  rows={3}
-                  value={verificationData.recommendation}
-                  onChange={handleChange}
-                  fullWidth
-                  required
-                  error={!!formErrors.recommendation}
-                  helperText={formErrors.recommendation}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Move for Interview"
-                  variant="outlined"
-                  select
-                  name="move_for_interview"
-                  value={verificationData.move_for_interview}
-                  onChange={handleChange}
-                  fullWidth
-                  required
-                  error={!!formErrors.move_for_interview}
-                  helperText={formErrors.move_for_interview}
-                >
-                  <MenuItem value="-">-</MenuItem>
-                  <MenuItem value="yes">yes</MenuItem>
-                  <MenuItem value="no">no</MenuItem>
-                </TextField>
-              </Grid>
-              {/* <Grid item xs={12} sm={6}>
-          <TextField
-            label="Status"
-            variant="outlined"
-            name="status"
-            value={formData.status}
-            onChange={handleChange}
-            fullWidth
-          />
-        </Grid> */}
+          <Typography
+            variant="h4"
+            align="center"
+            gutterBottom
+            sx={{
+              color: colors.textPrimary,
+              fontWeight: 700,
+              letterSpacing: "0.05em",
+              marginBottom: 2,
+            }}
+          >
+            EDIT VERIFICATION
+          </Typography>
 
+          <form onSubmit={handleSubmit}>
+            <Box
+              sx={{
+                pt: 2,
+                maxHeight: "calc(100vh - 200px)",
+                overflowY: "auto",
+                paddingRight: 2,
+                overflowX: "hidden",
+                "& .MuiInputLabel-shrink": {
+                  backgroundColor: "#fff",
+                  padding: "0 4px",
+                  zIndex: 1,
+                },
+              }}
+            >
+              <Grid container spacing={4}>
+                {/* Application Field (Read-only) */}
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    select
+                    label="Application"
+                    variant="outlined"
+                    name="application"
+                    value={verificationData.application || ""}
+                    fullWidth
+                    required
+                    InputProps={{ readOnly: true }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "8px",
+                        "&.Mui-focused fieldset": {
+                          borderColor: colors.primary,
+                        },
+                      },
+                    }}
+                  >
+                    {applications.map((app) => (
+                      <MenuItem key={app.id} value={app.id}>
+                        {app.name} {app.last_name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+
+                {/* Other Fields */}
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="Verifier name"
+                    variant="outlined"
+                    name="verifier_name"
+                    value={verificationData.verifier_name}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    fullWidth
+                    required
+                    error={!!formErrors.verifier_name}
+                    helperText={formErrors.verifier_name}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "8px",
+                        "&.Mui-focused fieldset": {
+                          borderColor: colors.primary,
+                        },
+                      },
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="Verifier Email"
+                    type="email"
+                    variant="outlined"
+                    name="verifier_email"
+                    value={verificationData.verifier_email}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    fullWidth
+                    error={!!formErrors.verifier_email}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "8px",
+                        "&.Mui-focused fieldset": {
+                          borderColor: colors.primary,
+                        },
+                      },
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="Verifier Contact"
+                    variant="outlined"
+                    name="verifier_contact"
+                    value={verificationData.verifier_contact}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    fullWidth
+                    required
+                    error={!!formErrors.verifier_contact}
+                    helperText={formErrors.verifier_contact}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "8px",
+                        "&.Mui-focused fieldset": {
+                          borderColor: colors.primary,
+                        },
+                      },
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    type="date"
+                    label="Verification Date"
+                    variant="outlined"
+                    name="verification_date"
+                    value={verificationData.verification_date}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    fullWidth
+                    required
+                    error={!!formErrors.verification_date}
+                    helperText={formErrors.verification_date}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "8px",
+                        "&.Mui-focused fieldset": {
+                          borderColor: colors.primary,
+                        },
+                      },
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <TextField
+                    label="Verification Method"
+                    variant="outlined"
+                    name="verification_method"
+                    multiline
+                    rows={3}
+                    value={verificationData.verification_method}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    fullWidth
+                    required
+                    error={!!formErrors.verification_method}
+                    helperText={formErrors.verification_method}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "8px",
+                        "&.Mui-focused fieldset": {
+                          borderColor: colors.primary,
+                        },
+                      },
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <TextField
+                    label="Recommendation"
+                    variant="outlined"
+                    name="recommendation"
+                    multiline
+                    rows={3}
+                    value={verificationData.recommendation}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    fullWidth
+                    required
+                    error={!!formErrors.recommendation}
+                    helperText={formErrors.recommendation}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "8px",
+                        "&.Mui-focused fieldset": {
+                          borderColor: colors.primary,
+                        },
+                      },
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="Move for Interview"
+                    variant="outlined"
+                    select
+                    name="move_for_interview"
+                    value={verificationData.move_for_interview}
+                    onChange={handleChange}
+                    fullWidth
+                    required
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "8px",
+                        "&.Mui-focused fieldset": {
+                          borderColor: colors.primary,
+                        },
+                      },
+                    }}
+                  >
+                    <MenuItem value="-">-</MenuItem>
+                    <MenuItem value="yes">yes</MenuItem>
+                    <MenuItem value="no">no</MenuItem>
+                  </TextField>
+                </Grid>
+              </Grid>
+            </Box>
+
+            <Box
+              sx={{ display: "flex", justifyContent: "center", marginTop: 2 }}
+            >
               <Button
                 type="submit"
                 variant="contained"
                 color="primary"
-                style={{
-                  marginTop: 20,
-                  marginLeft: 300,
-                  paddingRight: 30,
-                  paddingLeft: 30,
+                disabled={loading}
+                sx={{
+                  backgroundColor: colors.accent,
+                  color: "white",
+                  borderRadius: "8px",
+                  padding: "12px 40px",
+                  fontSize: "1.1rem",
+                  fontWeight: 600,
+                  boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)",
+                  "&:hover": {
+                    backgroundColor: "#00A040",
+                    boxShadow: "0px 6px 15px rgba(0, 0, 0, 0.15)",
+                    transform: "translateY(-2px)",
+                  },
+                  transition: "all 0.3s ease-in-out",
                 }}
               >
-                Submit
+                {loading ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  "Update Verification"
+                )}
               </Button>
-            </Grid>
-          </Box>
-        </form>
-      </Paper>
-      /
+            </Box>
+          </form>
+        </Box>
+      </Box>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbarSeverity}
+          sx={{
+            width: "100%",
+            borderRadius: "8px",
+            boxShadow: "0px 4px 15px rgba(0, 0, 0, 0.1)",
+          }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

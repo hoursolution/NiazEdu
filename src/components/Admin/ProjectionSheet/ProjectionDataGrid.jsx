@@ -29,7 +29,6 @@ import {
 } from "@mui/material";
 import {
   DataGrid,
-  GridToolbar,
   GridToolbarContainer,
   GridToolbarExport,
   GridToolbarFilterButton,
@@ -43,6 +42,7 @@ import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import DescriptionIcon from "@mui/icons-material/Description"; // Challan
 import AssessmentIcon from "@mui/icons-material/Assessment"; // Result
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong"; // Receipt
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import FolderIcon from "@mui/icons-material/Folder";
 import AddIcon from "@mui/icons-material/Add"; // Other Documents
 import RemoveIcon from "@mui/icons-material/Remove";
@@ -50,15 +50,12 @@ import { Snackbar, Alert } from "@mui/material";
 import AdditionalSupportForm from "./AdditionalSupportForm";
 import { LiaMoneyCheckAltSolid } from "react-icons/lia";
 import { RiFundsBoxLine } from "react-icons/ri";
-import {
-  MdDelete,
-  MdEditNotifications,
-  MdPendingActions,
-} from "react-icons/md";
+import { MdDelete, MdPendingActions } from "react-icons/md";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
 import InfoIcon from "@mui/icons-material/Info";
 import WarningIcon from "@mui/icons-material/Warning";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { CiEdit, CiExport } from "react-icons/ci";
@@ -67,6 +64,7 @@ import { ThumbUp } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { IoMdCloseCircle, IoMdEye } from "react-icons/io";
 
 // Custom GridToolbar with the "Projection" button
 const CustomToolbar = ({
@@ -189,7 +187,8 @@ const StyledDataGrid = styled(DataGrid)({
     },
   },
 });
-
+const MAX_FILE_SIZE_MB = 5; // 5MB limit
+const ACCEPTED_FILE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const ProjectionDataGrid = () => {
   const { id } = useParams();
   const [rows, setRows] = useState([]);
@@ -208,11 +207,14 @@ const ProjectionDataGrid = () => {
     totalPaid: 0,
     remainingBalance: 0,
   });
+  // State to track selected files before upload
+  const [fileErrors, setFileErrors] = useState({});
 
   const navigate = useNavigate();
 
   // const BASE_URL = "http://127.0.0.1:8000";
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
 
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -223,12 +225,19 @@ const ProjectionDataGrid = () => {
     other_cost_contribution: "",
     admission_fee_contribution: "",
     total_amount: "",
-    percentage: "",
+    transport_contribution: "",
+    health_insurance_contribution: "",
+    eid_al_adha_contribution: "",
+    eid_al_fitr_contribution: "",
+    birthday_contribution: "",
+    uniform_contribution: "",
+    books_supplies_contribution: "",
     Projection_ending_date: "",
     actual_amount_of_challan: "",
     challan_date: "",
     challan_due_date: "",
     challan_payment_date: "",
+    comment: "",
     status: "NYD",
     challan: null,
     receipt: null,
@@ -241,6 +250,7 @@ const ProjectionDataGrid = () => {
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const [showSupportForm, setShowSupportForm] = useState(false);
+
   const [filePreviews, setFilePreviews] = useState({
     challan: null,
     receipt: null,
@@ -325,12 +335,19 @@ const ProjectionDataGrid = () => {
         other_cost_contribution: "",
         admission_fee_contribution: "",
         total_amount: "",
-        percentage: "",
+        transport_contribution: "",
+        health_insurance_contribution: "",
+        eid_al_adha_contribution: "",
+        eid_al_fitr_contribution: "",
+        birthday_contribution: "",
+        uniform_contribution: "",
+        books_supplies_contribution: "",
         Projection_ending_date: "",
         actual_amount_of_challan: "",
         challan_date: "",
         challan_due_date: "",
         challan_payment_date: "",
+        comment: "",
         status: "NYD",
         challan: null,
         receipt: null,
@@ -523,12 +540,44 @@ const ProjectionDataGrid = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setEditRow((prevRow) => ({ ...prevRow, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  const handleFileChange = (e, fileType) => {
+  const handleFileChange = (e, fieldName) => {
     const file = e.target.files[0];
-    setSelectedFiles((prevFiles) => ({ ...prevFiles, [fileType]: file }));
+    let error = null;
+
+    if (file) {
+      // Validate file type
+      if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
+        error = "Invalid file type (only PDF, JPG, PNG allowed)";
+      }
+      // Validate file size
+      else if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        error = `File too large (max ${MAX_FILE_SIZE_MB}MB)`;
+      }
+
+      if (error) {
+        setFileErrors((prev) => ({ ...prev, [fieldName]: error }));
+        setSelectedFiles((prev) => ({ ...prev, [fieldName]: null }));
+      } else {
+        setSelectedFiles((prev) => ({ ...prev, [fieldName]: file }));
+        setFileErrors((prev) => ({ ...prev, [fieldName]: null }));
+        // Preview file immediately (creates object URL)
+        const fileUrl = URL.createObjectURL(file);
+        handleInputChange({
+          target: {
+            name: fieldName,
+            value: fileUrl,
+          },
+        });
+      }
+    } else {
+      setSelectedFiles((prev) => ({ ...prev, [fieldName]: null }));
+    }
   };
 
   const handleOpenModal = (url, type) => {
@@ -710,7 +759,7 @@ const ProjectionDataGrid = () => {
 
     {
       field: "semester_number",
-      headerName: "Semester",
+      headerName: "Month",
       flex: 1,
       minWidth: 75,
       headerAlign: "center",
@@ -718,7 +767,7 @@ const ProjectionDataGrid = () => {
     },
     {
       field: "education_fee_contribution",
-      headerName: "Education Fee Contribution",
+      headerName: "Tuition Fee",
       flex: 1,
       minWidth: 110,
       headerAlign: "center",
@@ -728,7 +777,7 @@ const ProjectionDataGrid = () => {
     },
     {
       field: "other_cost_contribution",
-      headerName: "Other Cost Contribution",
+      headerName: "Other Cost ",
       flex: 1,
       minWidth: 110,
       headerAlign: "center",
@@ -738,7 +787,7 @@ const ProjectionDataGrid = () => {
     },
     {
       field: "admission_fee_contribution",
-      headerName: "Admission Fee Contribution",
+      headerName: "Admission Charges",
       flex: 1,
       minWidth: 110,
       headerAlign: "center",
@@ -756,30 +805,108 @@ const ProjectionDataGrid = () => {
       valueFormatter: (params) =>
         parseFloat(parseFloat(params.value || 0).toFixed(0)).toLocaleString(),
     },
-
     {
-      field: "percentage",
-      headerName: "Percentage(%)",
+      field: "transport_contribution",
+      headerName: "Transportation Fee",
       flex: 1,
-      minWidth: 105,
+      minWidth: 110,
       headerAlign: "center",
       align: "center",
-      valueGetter: (params) => {
-        const raw = params.row.percentage;
-        if (!raw) return "N/A";
+      valueFormatter: (params) =>
+        parseFloat(parseFloat(params.value || 0).toFixed(0)).toLocaleString(),
+    },
+    {
+      field: "health_insurance_contribution",
+      headerName: "Health Insurance",
+      flex: 1,
+      minWidth: 110,
+      headerAlign: "center",
+      align: "center",
+      valueFormatter: (params) =>
+        parseFloat(parseFloat(params.value || 0).toFixed(0)).toLocaleString(),
+    },
+    {
+      field: "eid_al_adha_contribution",
+      headerName: "Eid al-Adha Gift",
+      flex: 1,
+      minWidth: 110,
+      headerAlign: "center",
+      align: "center",
+      valueFormatter: (params) =>
+        parseFloat(parseFloat(params.value || 0).toFixed(0)).toLocaleString(),
+    },
+    {
+      field: "eid_al_fitr_contribution",
+      headerName: "Eid al-Fitr Gift",
+      flex: 1,
+      minWidth: 110,
+      headerAlign: "center",
+      align: "center",
+      valueFormatter: (params) =>
+        parseFloat(parseFloat(params.value || 0).toFixed(0)).toLocaleString(),
+    },
+    {
+      field: "birthday_contribution",
+      headerName: "Birthday Gift",
+      flex: 1,
+      minWidth: 110,
+      headerAlign: "center",
+      align: "center",
+      valueFormatter: (params) =>
+        parseFloat(parseFloat(params.value || 0).toFixed(0)).toLocaleString(),
+    },
+    {
+      field: "uniform_contribution",
+      headerName: "Uniform Cost",
+      flex: 1,
+      minWidth: 110,
+      headerAlign: "center",
+      align: "center",
+      valueFormatter: (params) =>
+        parseFloat(parseFloat(params.value || 0).toFixed(0)).toLocaleString(),
+    },
+    {
+      field: "books_supplies_contribution",
+      headerName: "Books & Supplies",
+      flex: 1,
+      minWidth: 110,
+      headerAlign: "center",
+      align: "center",
+      valueFormatter: (params) =>
+        parseFloat(parseFloat(params.value || 0).toFixed(0)).toLocaleString(),
+    },
 
-        const cleaned = raw.replace(/Sponsor \d+:\s*/g, "").split(",");
-        const rounded = cleaned.map((p) => Math.round(parseFloat(p)));
+    // {
+    //   field: "percentage",
+    //   headerName: "Percentage(%)",
+    //   flex: 1,
+    //   minWidth: 105,
+    //   headerAlign: "center",
+    //   align: "center",
+    //   valueGetter: (params) => {
+    //     const raw = params.row.percentage;
+    //     if (!raw) return "N/A";
 
-        if (rounded.length === 1 || (rounded[1] && rounded[1] > 0)) {
-          return rounded
-            .filter((v) => v > 0)
-            .map((v) => `${v}%`)
-            .join(", ");
-        } else {
-          return `${rounded[0]}%`;
-        }
-      },
+    //     const cleaned = raw.replace(/Sponsor \d+:\s*/g, "").split(",");
+    //     const rounded = cleaned.map((p) => Math.round(parseFloat(p)));
+
+    //     if (rounded.length === 1 || (rounded[1] && rounded[1] > 0)) {
+    //       return rounded
+    //         .filter((v) => v > 0)
+    //         .map((v) => `${v}%`)
+    //         .join(", ");
+    //     } else {
+    //       return `${rounded[0]}%`;
+    //     }
+    //   },
+    // },
+    {
+      field: "comment",
+      headerName: "Notes / Remarks",
+      flex: 1,
+      minWidth: 110,
+      headerAlign: "center",
+      align: "center",
     },
     {
       field: "Projection_ending_date",
@@ -1497,7 +1624,7 @@ const ProjectionDataGrid = () => {
   );
 
   return (
-    <Box>
+    <Box sx={{ width: "100%" }}>
       {id && (
         <Box
           sx={{
@@ -1668,257 +1795,276 @@ const ProjectionDataGrid = () => {
         }}
       ></Box>
       <Collapse in={showForm}>
-        <Box
-          sx={{
-            backgroundColor: "#f9f9f9",
-            padding: { xs: 1, sm: 2 },
-            marginBottom: 2,
-            borderRadius: 2,
+        <Dialog
+          open={showForm}
+          onClose={() => setShowForm(false)}
+          fullWidth
+          maxWidth="md"
+          PaperProps={{
+            sx: {
+              borderRadius: "8px",
+              boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.3)",
+            },
           }}
         >
-          <Paper elevation={3} sx={{ padding: { xs: 1, sm: 2 } }}>
-            <Typography variant="h5" align="center" gutterBottom>
-              Add Projection
-            </Typography>
-            <form onSubmit={handleSubmit}>
-              <Grid container spacing={2}>
-                {/* Semester Number */}
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    fullWidth
-                    label="Semester Number"
-                    name="semester_number"
-                    type="number"
-                    value={formData.semester_number}
-                    onChange={handleChange}
-                    variant="outlined"
-                    size="small"
-                    required
-                  />
-                </Grid>
-
-                {/* Education Fee Contribution */}
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    fullWidth
-                    label="Education Fee Contribution"
-                    name="education_fee_contribution"
-                    type="number"
-                    value={formData.education_fee_contribution}
-                    onChange={handleChange}
-                    variant="outlined"
-                    size="small"
-                    required
-                  />
-                </Grid>
-
-                {/* Other Cost Contribution */}
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    fullWidth
-                    label="Other Cost Contribution"
-                    name="other_cost_contribution"
-                    type="number"
-                    value={formData.other_cost_contribution}
-                    onChange={handleChange}
-                    variant="outlined"
-                    size="small"
-                    required
-                  />
-                </Grid>
-
-                {/* Total Amount */}
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    fullWidth
-                    label="Total Amount"
-                    name="total_amount"
-                    type="number"
-                    value={formData.total_amount}
-                    onChange={handleChange}
-                    variant="outlined"
-                    size="small"
-                    required
-                  />
-                </Grid>
-
-                {/* Percentage */}
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    fullWidth
-                    label="Percentage (%)"
-                    name="percentage"
-                    value={formData.percentage}
-                    onChange={handleChange}
-                    variant="outlined"
-                    size="small"
-                    required
-                  />
-                </Grid>
-
-                {/* Projection Ending Date */}
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    fullWidth
-                    label="Estimated Date of Payment"
-                    name="Projection_ending_date"
-                    type="date"
-                    value={formData.Projection_ending_date}
-                    onChange={handleChange}
-                    variant="outlined"
-                    size="small"
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-
-                {/* Actual Amount of Challan */}
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    fullWidth
-                    label="Actual Amount of Challan"
-                    name="actual_amount_of_challan"
-                    type="number"
-                    value={formData.actual_amount_of_challan}
-                    onChange={handleChange}
-                    variant="outlined"
-                    size="small"
-                  />
-                </Grid>
-
-                {/* Challan Date */}
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    fullWidth
-                    label="Challan Date"
-                    name="challan_date"
-                    type="date"
-                    value={formData.challan_date}
-                    onChange={handleChange}
-                    variant="outlined"
-                    size="small"
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-
-                {/* Challan Due Date */}
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    fullWidth
-                    label="Challan Due Date"
-                    name="challan_due_date"
-                    type="date"
-                    value={formData.challan_due_date}
-                    onChange={handleChange}
-                    variant="outlined"
-                    size="small"
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-
-                {/* Challan Payment Date */}
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    fullWidth
-                    label="Payment Date"
-                    name="challan_payment_date"
-                    type="date"
-                    value={formData.challan_payment_date}
-                    onChange={handleChange}
-                    variant="outlined"
-                    size="small"
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-
-                {/* Status */}
-                <Grid item xs={12} sm={6} md={4}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Status</InputLabel>
-                    <Select
-                      name="status"
-                      value={formData.status}
+          <Box
+            sx={{
+              backgroundColor: "#f9f9f9",
+              padding: { xs: 2, sm: 3 },
+              marginBottom: 2,
+              borderRadius: 2,
+              boxShadow: 3,
+            }}
+          >
+            <Paper elevation={3} sx={{ padding: { xs: 2, sm: 3 } }}>
+              <Typography variant="h5" align="center" gutterBottom>
+                Add Projection
+              </Typography>
+              <form onSubmit={handleSubmit}>
+                <Grid container spacing={3}>
+                  {/* Semester Number */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      fullWidth
+                      label="Month"
+                      name="semester_number"
+                      type="number"
+                      value={formData.semester_number}
                       onChange={handleChange}
-                      label="Status"
-                    >
-                      <MenuItem value="NYD">NYD</MenuItem>
-                      <MenuItem value="Due">Due</MenuItem>
-                      <MenuItem value="Paid">Paid</MenuItem>
-                      <MenuItem value="Overdue">Overdue</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                {/* File Upload Fields with Labels and View Option */}
-                {[
-                  {
-                    name: "challan",
-                    label: "Challan",
-                    icon: <DescriptionIcon />,
-                  },
-                  {
-                    name: "receipt",
-                    label: "Receipt",
-                    icon: <ReceiptLongIcon />,
-                  },
-                  { name: "result", label: "Result", icon: <AssessmentIcon /> },
-                  {
-                    name: "other_documents",
-                    label: "Other Documents",
-                    icon: <FolderIcon />,
-                  },
-                ].map((field) => (
-                  <Grid item xs={12} sm={6} md={4} key={field.name}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      {field.label}
-                    </Typography>
-                    <input
-                      type="file"
-                      name={field.name}
-                      onChange={handleFileChanges}
-                      style={{ marginBottom: "8px" }}
+                      variant="outlined"
+                      size="small"
+                      required
                     />
-                    {filePreviews[field.name] && (
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        size="small"
-                        onClick={() =>
-                          handleViewDocuments(
-                            filePreviews[field.name],
-                            field.label
-                          )
-                        }
-                      >
-                        View {field.label}
-                      </Button>
-                    )}
                   </Grid>
-                ))}
 
-                {/* Submit Button */}
-                <Grid item xs={12}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "center",
-                      marginTop: 2,
-                    }}
-                  >
-                    <Button type="submit" variant="contained" color="primary">
-                      Submit
-                    </Button>
-                  </Box>
+                  {/* Monthly Tuition Fee */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      fullWidth
+                      label="Monthly Tuition Fee"
+                      name="education_fee_contribution"
+                      type="number"
+                      value={formData.education_fee_contribution}
+                      onChange={handleChange}
+                      variant="outlined"
+                      size="small"
+                      required
+                    />
+                  </Grid>
+
+                  {/* Other Cost Contribution */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      fullWidth
+                      label="Other Cost"
+                      name="other_cost_contribution"
+                      type="number"
+                      value={formData.other_cost_contribution}
+                      onChange={handleChange}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+
+                  {/* Total Amount */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      fullWidth
+                      label="Total Amount"
+                      name="total_amount"
+                      type="number"
+                      value={formData.total_amount}
+                      onChange={handleChange}
+                      variant="outlined"
+                      size="small"
+                      required
+                    />
+                  </Grid>
+
+                  {/* Additional Contributions */}
+                  {[
+                    {
+                      label: "Transportation Fee",
+                      name: "transport_contribution",
+                    },
+                    {
+                      label: "Health Insurance",
+                      name: "health_insurance_contribution",
+                    },
+                    { label: "Eid al-Adha", name: "eid_al_adha_contribution" },
+                    { label: "Eid al-Fitr", name: "eid_al_fitr_contribution" },
+                    { label: "Birthday Gift", name: "birthday_contribution" },
+                    { label: "Uniform Cost", name: "uniform_contribution" },
+                    {
+                      label: "Books & Supplies",
+                      name: "books_supplies_contribution",
+                    },
+                  ].map((field) => (
+                    <Grid item xs={12} sm={6} md={4} key={field.name}>
+                      <TextField
+                        variant="outlined"
+                        size="small"
+                        label={field.label}
+                        name={field.name}
+                        value={formData[field.name] || ""}
+                        onChange={handleInputChange}
+                        fullWidth
+                        type="number"
+                      />
+                    </Grid>
+                  ))}
+
+                  {/* Estimated Date of Payment */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      fullWidth
+                      label="Estimated Date of Payment"
+                      name="Projection_ending_date"
+                      type="date"
+                      value={formData.Projection_ending_date}
+                      onChange={handleChange}
+                      variant="outlined"
+                      size="small"
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+
+                  {/* Actual Amount of Challan */}
+                  <Grid item xs={12} sm={6} md={6}>
+                    <TextField
+                      fullWidth
+                      label="Actual Amount of Challan"
+                      name="actual_amount_of_challan"
+                      type="number"
+                      value={formData.actual_amount_of_challan}
+                      onChange={handleChange}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+
+                  {/* Status */}
+                  <Grid item xs={12} sm={6} md={6}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Status</InputLabel>
+                      <Select
+                        name="status"
+                        value={formData.status}
+                        onChange={handleChange}
+                        label="Status"
+                      >
+                        <MenuItem value="NYD">NYD</MenuItem>
+                        <MenuItem value="Due">Due</MenuItem>
+                        <MenuItem value="Paid">Paid</MenuItem>
+                        <MenuItem value="Overdue">Overdue</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
+                  {/* File Upload Fields */}
+                  {[
+                    {
+                      name: "challan",
+                      label: "Challan",
+                      icon: <DescriptionIcon />,
+                    },
+                    {
+                      name: "receipt",
+                      label: "Receipt",
+                      icon: <ReceiptLongIcon />,
+                    },
+                    {
+                      name: "result",
+                      label: "Result",
+                      icon: <AssessmentIcon />,
+                    },
+                    {
+                      name: "other_documents",
+                      label: "Other Documents",
+                      icon: <FolderIcon />,
+                    },
+                  ].map((field) => (
+                    <Grid item xs={12} sm={6} md={6} key={field.name}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        {field.label}
+                      </Typography>
+                      <input
+                        type="file"
+                        name={field.name}
+                        onChange={handleFileChanges}
+                        style={{ marginBottom: "8px", width: "100%" }}
+                      />
+                      {filePreviews[field.name] && (
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          size="small"
+                          onClick={() =>
+                            handleViewDocuments(
+                              filePreviews[field.name],
+                              field.label
+                            )
+                          }
+                        >
+                          View {field.label}
+                        </Button>
+                      )}
+                    </Grid>
+                  ))}
+
+                  {/* Comment Field */}
+                  <Grid item xs={12}>
+                    <TextField
+                      variant="outlined"
+                      size="small"
+                      label="Comment"
+                      name="comment"
+                      value={formData.comment || ""}
+                      onChange={handleInputChange}
+                      fullWidth
+                      multiline
+                      rows={2}
+                    />
+                  </Grid>
+
+                  {/* Submit Button */}
+                  <Grid item xs={12}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "center",
+                        marginTop: 2,
+                      }}
+                    >
+                      <Button type="submit" variant="contained" color="primary">
+                        Submit
+                      </Button>
+                    </Box>
+                  </Grid>
                 </Grid>
-              </Grid>
-            </form>
-          </Paper>
-        </Box>
+              </form>
+            </Paper>
+          </Box>
+        </Dialog>
       </Collapse>
 
       {/* Additional Support Section */}
       {/* Collapsible Form */}
       <Collapse in={showSupportForm}>
-        <AdditionalSupportForm studentId={id} />
+        <Dialog
+          open={showSupportForm}
+          onClose={() => setShowSupportForm(false)}
+          fullWidth
+          maxWidth="md"
+          PaperProps={{
+            sx: {
+              borderRadius: "8px",
+              boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.3)",
+            },
+          }}
+        >
+          <AdditionalSupportForm studentId={id} />
+        </Dialog>
       </Collapse>
 
       <Box sx={{ width: "100%" }}>
@@ -1976,272 +2122,367 @@ const ProjectionDataGrid = () => {
           open={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           fullWidth
+          maxWidth="md"
         >
-          <DialogTitle className="bg-slate-700 text-white">
+          <DialogTitle
+            sx={{
+              bgcolor: "primary.main",
+              color: "white",
+              p: 2,
+              fontSize: "1.2rem",
+            }}
+          >
             Edit Projection
           </DialogTitle>
-          <DialogContent className="flex flex-col gap-3 mt-8">
-            <TextField
-              margin="dense"
-              label="Semester Number"
-              name="semester_number"
-              value={editRow?.semester_number || ""}
-              onChange={handleInputChange}
-              fullWidth
-              InputProps={{
-                readOnly: true,
-              }}
-            />
-            <TextField
-              margin="dense"
-              label="Sponsor Name"
-              name="sponsor_name"
-              value={editRow?.sponsor_name || ""}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              margin="dense"
-              label="Total Amount"
-              name="total_amount"
-              type="number"
-              value={editRow?.total_amount || ""}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              margin="dense"
-              label="Admission Fee Contribution"
-              name="admission_fee_contribution"
-              value={editRow?.admission_fee_contribution || ""}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              margin="dense"
-              label="Education Fee Contribution"
-              name="education_fee_contribution"
-              value={editRow?.education_fee_contribution || ""}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              margin="dense"
-              label="Other Cost Contribution"
-              name="other_cost_contribution"
-              value={editRow?.other_cost_contribution || ""}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              margin="dense"
-              label="Percentage"
-              name="percentage"
-              value={editRow?.percentage || ""}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              margin="dense"
-              label="Actual Amount of Challan"
-              name="actual_amount_of_challan"
-              type="number"
-              value={editRow?.actual_amount_of_challan || ""}
-              onChange={handleInputChange}
-              fullWidth
-            />
-            <TextField
-              margin="dense"
-              label="Challan  Date"
-              name="challan_date"
-              type="date"
-              value={editRow?.challan_date || ""}
-              onChange={handleInputChange}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-            <InputLabel shrink>Existing Challan</InputLabel>
-            {editRow?.challan ? (
-              <Button
-                size="small"
-                variant="contained"
-                href={editRow.challan}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                View Existing Challan
-              </Button>
-            ) : (
-              "No Challan Uploaded"
-            )}
-            <input
-              type="file"
-              name="challan"
-              onChange={(e) => handleFileChange(e, "challan")}
-              style={{ margin: "10px 0" }}
-            />
-            <TextField
-              margin="dense"
-              label="Challan Due Date"
-              name="challan_due_date"
-              type="date"
-              value={editRow?.challan_due_date || ""}
-              onChange={handleInputChange}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-            <InputLabel shrink>Existing Transfer Receipt</InputLabel>
-            {editRow?.receipt ? (
-              <Button
-                size="small"
-                variant="contained"
-                href={editRow.receipt}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                View Receipt
-              </Button>
-            ) : (
-              "No Receipt Uploaded"
-            )}
-            <input
-              type="file"
-              name="receipt"
-              onChange={(e) => handleFileChange(e, "receipt")}
-              style={{ margin: "10px 0" }}
-            />
+          <DialogContent sx={{ p: 2 }}>
+            <Grid container spacing={3} sx={{ mb: 2, mt: 2 }}>
+              {/* Row 1 */}
+              <Grid item xs={6} sm={4} md={3}>
+                <TextField
+                  size="small"
+                  label="Month"
+                  name="semester_number"
+                  value={editRow?.semester_number || ""}
+                  InputProps={{ readOnly: true }}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={3}>
+                <TextField
+                  size="small"
+                  label="Sponsor"
+                  name="sponsor_name"
+                  value={editRow?.sponsor_name || ""}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={3}>
+                <TextField
+                  size="small"
+                  label="Total Amount"
+                  name="total_amount"
+                  type="number"
+                  value={editRow?.total_amount || ""}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={3}>
+                <TextField
+                  size="small"
+                  label="Admission Fee"
+                  name="admission_fee_contribution"
+                  value={editRow?.admission_fee_contribution || ""}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
 
-            <TextField
-              margin="dense"
-              label="Challan Payment Date"
-              name="challan_payment_date"
-              type="date"
-              value={editRow?.challan_payment_date || ""}
-              onChange={handleInputChange}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-            <InputLabel shrink>Existing Payment Receipt</InputLabel>
-            {editRow?.payment_receipt ? (
-              <Button
-                size="small"
-                variant="contained"
-                href={editRow.payment_receipt}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                View Payment Receipt
-              </Button>
-            ) : (
-              "No Payment Receipt Uploaded"
-            )}
-            <input
-              type="file"
-              name="payment_receipt"
-              onChange={(e) => handleFileChange(e, "payment_receipt")}
-              style={{ margin: "10px 0" }}
-            />
+              {/* Row 2 */}
+              <Grid item xs={6} sm={4} md={3}>
+                <TextField
+                  size="small"
+                  label="Monthly Tuition Fee"
+                  name="education_fee_contribution"
+                  value={editRow?.education_fee_contribution || ""}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={3}>
+                <TextField
+                  size="small"
+                  label="Other Costs"
+                  name="other_cost_contribution"
+                  value={editRow?.other_cost_contribution || ""}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={3}>
+                <TextField
+                  size="small"
+                  label="Transportation Fee"
+                  name="transport_contribution"
+                  value={editRow?.transport_contribution || ""}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={3}>
+                <TextField
+                  size="small"
+                  label="Health Insurance"
+                  name="health_insurance_contribution"
+                  value={editRow?.health_insurance_contribution || ""}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
 
-            <InputLabel shrink>Existing Result</InputLabel>
-            {editRow?.result ? (
-              <Button
-                size="small"
-                variant="contained"
-                href={editRow.result}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                View Result
-              </Button>
-            ) : (
-              "No Result Uploaded"
-            )}
-            <input
-              type="file"
-              name="result"
-              onChange={(e) => handleFileChange(e, "result")}
-              style={{ margin: "10px 0" }}
-            />
+              {/* Row 3 */}
+              <Grid item xs={6} sm={4} md={3}>
+                <TextField
+                  size="small"
+                  label="Eid al-Adha"
+                  name="eid_al_adha_contribution"
+                  value={editRow?.eid_al_adha_contribution || ""}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={3}>
+                <TextField
+                  size="small"
+                  label="Eid al-Fitr"
+                  name="eid_al_fitr_contribution"
+                  value={editRow?.eid_al_fitr_contribution || ""}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={3}>
+                <TextField
+                  size="small"
+                  label="Birthday Gift"
+                  name="birthday_contribution"
+                  value={editRow?.birthday_contribution || ""}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={3}>
+                <TextField
+                  size="small"
+                  label="Uniform Cost"
+                  name="uniform_contribution"
+                  value={editRow?.uniform_contribution || ""}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
 
-            <InputLabel shrink>Existing Documents</InputLabel>
-            {editRow?.other_documents ? (
-              <Button
-                size="small"
-                variant="contained"
-                href={editRow.other_documents}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                View Document
-              </Button>
-            ) : (
-              "No Result Uploaded"
-            )}
-            <input
-              type="file"
-              name="other_documents"
-              onChange={(e) => handleFileChange(e, "other_documents")}
-              style={{ margin: "10px 0" }}
-            />
-            {/* <TextField
-              margin="dense"
-              label="Result"
-              name="result"
-              multiline
-              rows={4}
-              value={editRow?.result || ""}
-              onChange={handleInputChange}
-              fullWidth
-            /> */}
-            {/* <TextField
-              margin="dense"
-              label="Status"
-              name="status"
-              select
-              value={editRow?.status || ""}
-              onChange={handleInputChange}
-              fullWidth
-            >
-              {["NYD", "Due", "Paid", "Overdue"].map((status) => (
-                <MenuItem key={status} value={status}>
-                  {status}
-                </MenuItem>
-              ))}
-            </TextField> */}
+              {/* Dates Section */}
+              {/* <Grid item xs={12} sx={{ mt: 1 }}>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Payment Dates
+                </Typography>
+              </Grid> */}
 
-            {/* <input
-              type="file"
-              name="receipt"
-              onChange={(e) => handleFileChange(e, "receipt")}
-              style={{ margin: "10px 0" }}
-            /> */}
+              <Grid item xs={6} sm={4} md={3}>
+                <TextField
+                  size="small"
+                  label="Estimated Date"
+                  name="Projection_ending_date"
+                  type="date"
+                  value={editRow?.Projection_ending_date || ""}
+                  onChange={handleInputChange}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={3}>
+                <TextField
+                  size="small"
+                  label="Actual Amount"
+                  name="actual_amount_of_challan"
+                  type="number"
+                  value={editRow?.actual_amount_of_challan || ""}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={3}>
+                <TextField
+                  size="small"
+                  label="Challan Date"
+                  name="challan_date"
+                  type="date"
+                  value={editRow?.challan_date || ""}
+                  InputLabelProps={{ shrink: true }}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={3}>
+                <TextField
+                  size="small"
+                  label="Due Date"
+                  name="challan_due_date"
+                  type="date"
+                  value={editRow?.challan_due_date || ""}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                  onChange={handleInputChange}
+                />
+              </Grid>
+
+              {/* Documents Section */}
+              <Grid item xs={12} sx={{ mt: 1 }}>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Documents
+                </Typography>
+              </Grid>
+
+              {/* Challan Dates */}
+              <Grid container spacing={2}>
+                {[
+                  "challan",
+                  "receipt",
+                  "payment_receipt",
+                  "result",
+                  "other_documents",
+                ].map((docType) => {
+                  const fileType = selectedFiles[docType]?.type || "";
+                  const fileSizeMB = selectedFiles[docType]
+                    ? (selectedFiles[docType].size / (1024 * 1024)).toFixed(2)
+                    : null;
+
+                  return (
+                    <Grid item xs={12} sm={6} key={docType}>
+                      <Box
+                        sx={{
+                          border: "1px solid #eee",
+                          borderRadius: 1,
+                          p: 2,
+                          position: "relative",
+                        }}
+                      >
+                        {/* Document Type Label */}
+                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                          {docType.replace(/_/g, " ").toUpperCase()}
+                        </Typography>
+
+                        {/* Existing File Display */}
+                        {editRow?.[docType] && !selectedFiles[docType] && (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              // mb: 1,
+                            }}
+                          >
+                            <Tooltip title="View document">
+                              <IconButton
+                                href={editRow[docType]}
+                                target="_blank"
+                                color="primary"
+                                size="large"
+                              >
+                                {IoMdEye(
+                                  editRow[docType].includes("pdf")
+                                    ? "application/pdf"
+                                    : "image/jpeg"
+                                )}
+                              </IconButton>
+                            </Tooltip>
+                            <Typography variant="body2" sx={{ flex: 1 }}>
+                              Current File
+                            </Typography>
+                          </Box>
+                        )}
+
+                        {/* Selected File Display */}
+                        {selectedFiles[docType] && (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                              mb: 1,
+                              p: 1,
+                              backgroundColor: "#f5f5f5",
+                              borderRadius: 1,
+                            }}
+                          >
+                            <Box sx={{ color: "primary.main" }}>
+                              <CheckCircleIcon
+                                color="success"
+                                fontSize="small"
+                              />
+                            </Box>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="body2" noWrap>
+                                {selectedFiles[docType].name}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                {fileSizeMB} MB •{" "}
+                                {fileType.split("/")[1]?.toUpperCase()}
+                              </Typography>
+                            </Box>
+                            <IconButton
+                              size="small"
+                              onClick={() => clearFileSelection(docType)}
+                            >
+                              <IoMdCloseCircle size={20} color="red" />
+                            </IconButton>
+                          </Box>
+                        )}
+
+                        {/* File Error */}
+                        {fileErrors[docType] && (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                              color: "error.main",
+                              mt: 1,
+                            }}
+                          >
+                            <ErrorOutlineIcon fontSize="small" />
+                            <Typography variant="caption">
+                              {fileErrors[docType]}
+                            </Typography>
+                          </Box>
+                        )}
+
+                        {/* File Upload */}
+                        <label htmlFor={`upload-${docType}`}>
+                          <Button
+                            component="span"
+                            variant="outlined"
+                            color="primary"
+                            startIcon={<CloudUploadIcon />}
+                            fullWidth
+                            sx={{ mt: 1 }}
+                          >
+                            {editRow?.[docType] ? "Replace" : "Upload"}
+                            <input
+                              id={`upload-${docType}`}
+                              type="file"
+                              name={docType}
+                              onChange={(e) => handleFileChange(e, docType)}
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              hidden
+                            />
+                          </Button>
+                        </label>
+                      </Box>
+                    </Grid>
+                  );
+                })}
+              </Grid>
+            </Grid>
           </DialogContent>
-          <DialogActions>
+          <DialogActions sx={{ p: 2 }}>
             <Button
               onClick={() => setIsEditModalOpen(false)}
+              variant="outlined"
               color="error"
-              sx={{
-                backgroundColor: "red",
-                color: "white",
-                "&:hover": {
-                  backgroundColor: "#941d15",
-                  color: "white",
-                },
-              }}
+              sx={{ minWidth: 100 }}
             >
               Cancel
             </Button>
             <Button
               onClick={handleFormSubmit}
+              variant="contained"
               color="primary"
-              sx={{
-                backgroundColor: "green",
-                color: "white",
-                "&:hover": {
-                  backgroundColor: "#1c7004",
-                  color: "white",
-                },
-              }}
+              sx={{ minWidth: 100 }}
             >
               Save
             </Button>

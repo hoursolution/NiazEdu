@@ -17,9 +17,15 @@ import {
   DialogActions,
   IconButton,
   Box,
+  Slide, // Import Slide for animations
 } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
 import { useNavigate } from "react-router-dom";
+
+// Define a transition component for Snackbar and Dialog
+const Transition = React.forwardRef(function Transition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
 
 const EditSelectDonorForm = ({
   SelectDonorId,
@@ -28,23 +34,42 @@ const EditSelectDonorForm = ({
 }) => {
   const navigate = useNavigate();
   // const BASE_URL = "http://127.0.0.1:8000";
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
+
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+
   const [formData, setFormData] = useState({
     application: "",
     donor: "",
-    admission_fee_considered: "",
-    education_fee_considered: "",
-    other_cost_considered: "",
-    admission_fee_persentage_considered: "",
-    education_fee_persentage_considered: "",
-    other_cost_persentage_considered: "",
+    selection_date: "",
+    trigger_projection: "",
     no_of_years: "",
+    // The following fields were commented out in the original request for styling,
+    // but are part of the formData state. They are kept here for functionality,
+    // but their corresponding UI elements are removed as per the instruction
+    // "the commented fields should be ignore".
+    semester_duration: "1",
     no_of_semesters: "",
     installments_per_semester: 1,
-    semester_duration: "",
-    trigger_projection: "No",
-    selection_date: "",
+
+    // Monthly
+    total_fee_of_the_program: "",
+    transport_amount: "",
+
+    // One-time
+    admission_fee_of_the_program: "",
+    other_amount: "",
+    health_insurance: "",
+    eid_al_adha_gift: "",
+    eid_al_fitr_gift: "",
+    birthday_gift: "",
+    living_expenses: "",
+    food_and_necessities_expenses: "",
+
+    // Month Triggers
+    eid_al_adha_month: "",
+    eid_al_fitr_month: "",
   });
   const [students, setStudents] = useState([]);
   const [donors, setDonors] = useState([]);
@@ -151,7 +176,7 @@ const EditSelectDonorForm = ({
 
         setFormData((prevFormData) => ({
           ...selectDonorData,
-          trigger_projection: "No",
+          trigger_projection: "No", // Ensure this is set to No by default on load
         }));
         setStudents(updatedData); // 'students' here means 'applications' list
         setDonors(donorsData);
@@ -170,22 +195,44 @@ const EditSelectDonorForm = ({
     setFieldErrors({});
   }, [formData.trigger_projection]);
 
-  const handleChange = (e) => {
+  const handleChange = async (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+
+    // If donor changed, fetch stats
+    if (name === "donor") {
+      try {
+        const res = await fetch(`${BASE_URL}/api/donor-summary/${value}/`);
+        if (res.ok) {
+          const data = await res.json();
+          setDonorStats(data);
+        } else {
+          setDonorStats({
+            total_paid: 0,
+            total_sponsored: 0,
+            remaining_to_allocate: 0,
+            sponsored_students: 0,
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching donor stats", err);
+      }
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validate required fields if projection is Yes
+    // Removed 'semester_duration', 'no_of_semesters', 'installments_per_semester'
+    // from requiredFields as their UI elements are ignored.
     const requiredFields =
       formData.trigger_projection === "Yes"
         ? [
             "no_of_years",
-            "no_of_semesters",
-            "installments_per_semester",
-            "semester_duration",
+            // "semester_duration", // Ignored as per instruction
+            // "no_of_semesters", // Ignored as per instruction
+            // "installments_per_semester", // Ignored as per instruction
           ]
         : [];
 
@@ -201,6 +248,7 @@ const EditSelectDonorForm = ({
     }
 
     setFieldErrors({});
+
     try {
       const response = await fetch(
         `${BASE_URL}/api/select-donor/${SelectDonorId}/`,
@@ -230,6 +278,7 @@ const EditSelectDonorForm = ({
       }
     } catch (error) {
       console.error("Error updating select-donor:", error);
+      setError(error.message || "Failed to update. Please try again."); // Set error state for display
     }
   };
 
@@ -249,11 +298,203 @@ const EditSelectDonorForm = ({
     setInfoDialogOpen(false);
   };
 
+  const months = [
+    { label: "January", value: 1 },
+    { label: "February", value: 2 },
+    { label: "March", value: 3 },
+    { label: "April", value: 4 },
+    { label: "May", value: 5 },
+    { label: "June", value: 6 },
+    { label: "July", value: 7 },
+    { label: "August", value: 8 },
+    { label: "September", value: 9 },
+    { label: "October", value: 10 },
+    { label: "November", value: 11 },
+    { label: "December", value: 12 },
+  ];
+
+  const [donorStats, setDonorStats] = useState({
+    total_paid: 0,
+    total_sponsored: 0,
+    remaining_to_allocate: 0,
+    sponsored_students: 0,
+  });
+
+  const handleCloseAlert = () => setAlert(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [studentsRes, donorsRes, allSelectDonorsRes] = await Promise.all([
+          fetch(`${BASE_URL}/api/all-applications/`),
+          fetch(`${BASE_URL}/api/donor/`),
+          fetch(`${BASE_URL}/api/select-donor/`),
+        ]);
+
+        const [applications, donors, allSelectDonors] = await Promise.all([
+          studentsRes.json(),
+          donorsRes.json(),
+          allSelectDonorsRes.json(),
+        ]);
+
+        // Get assigned application IDs
+        const assignedApplicationIds = allSelectDonors.map(
+          (sd) => sd.application
+        );
+
+        // Filter out applications already assigned
+        const unassignedApplications = applications.filter(
+          (app) => !assignedApplicationIds.includes(app.id)
+        );
+
+        // Group applications by student full name
+        const grouped = {};
+        unassignedApplications.forEach((app) => {
+          const key = `${app.name} ${app.last_name}`;
+          if (!grouped[key]) {
+            grouped[key] = [];
+          }
+          grouped[key].push(app);
+        });
+
+        // Sort each group and assign display name
+        const groupedWithSortKey = Object.values(grouped).map((group) => {
+          group.sort((a, b) => a.id - b.id);
+          return {
+            sortKey: group[0].id,
+            items: group,
+          };
+        });
+
+        groupedWithSortKey.sort((a, b) => a.sortKey - b.sortKey);
+
+        const updatedData = [];
+        groupedWithSortKey.forEach((group) => {
+          group.items.forEach((app, index) => {
+            const order = index + 1;
+            const suffix = order === 1 ? "" : ` (${order})`;
+            const displayName = `${app.name} ${app.last_name}${suffix}`;
+            updatedData.push({
+              ...app,
+              displayNameWithOrder: displayName,
+            });
+          });
+        });
+
+        setStudents(updatedData);
+        setDonors(donors);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        // Optionally set an error state to display to the user
+        setAlert({
+          severity: "error",
+          message: "Failed to load data. Please try again later.",
+        });
+      }
+    };
+
+    fetchData();
+  }, []);
+
   return (
-    <Container maxWidth="md" sx={{ marginTop: 4 }}>
-      <Paper elevation={4} sx={{ padding: 3, borderRadius: 2 }}>
+    <Container maxWidth="100%" sx={{ marginTop: 4 }}>
+      {/* cards*/}
+      <Grid item xs={12} sx={{ width: "100%", marginBottom: "10px" }}>
+        <Paper
+          elevation={2}
+          sx={{
+            padding: 2,
+            backgroundColor: "#f5f5f5",
+            borderRadius: 2,
+            marginTop: 2,
+          }}
+        >
+          <Typography
+            sx={{ fontWeight: 600 }}
+            variant="h5"
+            gutterBottom
+            textAlign="center"
+          >
+            Donor Financial Summary
+          </Typography>
+          <Grid
+            container
+            spacing={1}
+            justifyContent="space-between"
+            alignItems="center"
+            textAlign="center"
+          >
+            {[
+              {
+                label: "📌 Committed by Donor",
+                value: donorStats.total_pledged,
+                description: "Total amount the donor has pledged.",
+                color: "green",
+              },
+              {
+                label: "💸 Paid so far by Donor ",
+                value: donorStats.total_paid,
+                description: "Actual amount received so far.",
+                color: "blue",
+              },
+              {
+                label: "🎓 Sponsored To Students",
+                value: donorStats.total_sponsored,
+                description: "Total amount sponsored to students.",
+                color: "orange",
+              },
+              {
+                label: "📊 Balance for Sponsorship",
+                value: donorStats.remaining_to_allocate,
+                description: "Paid amount not yet allocated to students.",
+                color: "red",
+              },
+              {
+                label: "👨‍🎓 Students Sponsored by Donor",
+                value: donorStats.sponsored_students,
+                description: "Total number of students supported.",
+                color: "teal",
+              },
+            ].map((item, index) => (
+              <Grid item xs={6} sm={2} key={index}>
+                <Box>
+                  <Typography variant="body2" fontWeight="bold" color="#5c5c5c">
+                    {item.label}
+                  </Typography>
+                  <Typography variant="subtitle1" color={item.color}>
+                    Rs: {item.value}
+                  </Typography>
+                  {/* <Typography variant="caption" color="textSecondary">
+                    {item.description}
+                  </Typography> */}
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+        </Paper>
+      </Grid>
+
+      <Paper
+        elevation={6} // Increased elevation for a more prominent look
+        sx={{
+          padding: 4,
+          borderRadius: 3, // More rounded corners
+          boxShadow: "0 8px 25px rgba(0, 0, 0, 0.15)", // Deeper shadow
+          transition: "transform 0.3s ease-in-out", // Smooth hover effect for the paper
+          "&:hover": {
+            transform: "translateY(-5px)", // Lift effect on hover
+          },
+        }}
+      >
         <Typography
-          sx={{ fontWeight: 700, color: "#0a2547" }}
+          sx={{
+            fontWeight: 700, // Bolder title
+            color: "#2c3e50", // Darker, modern text color
+            marginBottom: 3,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
           variant="h4"
           align="center"
           gutterBottom
@@ -261,8 +502,16 @@ const EditSelectDonorForm = ({
           Edit Select Donor
           <IconButton
             onClick={handleInfoDialogOpen}
-            sx={{ marginLeft: 1 }}
-            color="primary"
+            sx={{
+              marginLeft: 1,
+              color: "#3498db", // Modern blue color for info icon
+              transition: "transform 0.2s ease-in-out",
+              "&:hover": {
+                transform: "scale(1.1)", // Pop effect on hover
+                color: "#2980b9",
+              },
+            }}
+            aria-label="information about projection generation"
           >
             <InfoIcon />
           </IconButton>
@@ -275,42 +524,58 @@ const EditSelectDonorForm = ({
               margin: "20px 0",
             }}
           >
-            <CircularProgress />
+            <CircularProgress sx={{ color: "#3498db" }} />{" "}
+            {/* Modern blue spinner */}
           </div>
         )}
         {error && (
-          <Typography color="error" align="center" sx={{ marginBottom: 2 }}>
+          <Typography
+            color="error"
+            align="center"
+            sx={{ marginBottom: 2, fontWeight: 500 }}
+          >
             Error: {error}
           </Typography>
         )}
         {!loading && !error && (
           <form onSubmit={handleSubmit}>
-            <Grid container spacing={2} sx={{ marginTop: 2 }}>
+            <Grid container spacing={3}>
               <Grid item xs={12} sm={6}>
                 <TextField
+                  size="small"
                   select
                   label="Select Student"
                   variant="outlined"
                   name="application"
                   value={formData.application}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      application: parseInt(e.target.value, 10),
-                    })
-                  }
+                  onChange={handleChange}
                   fullWidth
                   required
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2, // Rounded input fields
+                      transition:
+                        "border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out",
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3498db", // Blue border on focus
+                        boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)", // Subtle shadow on focus
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "#5dade2", // Lighter blue on hover
+                      },
+                    },
+                  }}
                 >
-                  {students.map((app) => (
-                    <MenuItem key={app.id} value={app.id}>
-                      {app.displayNameWithOrder}
+                  {students.map((student) => (
+                    <MenuItem key={student.id} value={student.id}>
+                      {student.displayNameWithOrder}
                     </MenuItem>
                   ))}
                 </TextField>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
+                  size="small"
                   select
                   label="Select Donor"
                   variant="outlined"
@@ -319,7 +584,20 @@ const EditSelectDonorForm = ({
                   onChange={handleChange}
                   fullWidth
                   required
-                  sx={{ backgroundColor: "#f5f5f5" }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      transition:
+                        "border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out",
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3498db",
+                        boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "#5dade2",
+                      },
+                    },
+                  }}
                 >
                   {donors.map((donor) => (
                     <MenuItem key={donor.id} value={donor.id}>
@@ -328,85 +606,302 @@ const EditSelectDonorForm = ({
                   ))}
                 </TextField>
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6}>
                 <TextField
-                  label="Admission Fee Amount"
+                  size="small"
+                  label="Admission Fee"
                   variant="outlined"
-                  name="admission_fee_considered"
-                  value={formData.admission_fee_considered}
+                  name="admission_fee_of_the_program"
+                  value={formData.admission_fee_of_the_program}
                   onChange={handleChange}
                   fullWidth
-                  sx={{ backgroundColor: "#f5f5f5" }}
                   type="number"
+                  inputProps={{ min: 0 }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3498db",
+                        boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      },
+                      "&:hover fieldset": { borderColor: "#5dade2" },
+                    },
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  size="small"
+                  label="Monthly Tuition Fee"
+                  variant="outlined"
+                  name="total_fee_of_the_program"
+                  value={formData.total_fee_of_the_program}
+                  onChange={handleChange}
+                  fullWidth
+                  type="number"
+                  inputProps={{ min: 0 }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3498db",
+                        boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      },
+                      "&:hover fieldset": { borderColor: "#5dade2" },
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  size="small"
+                  label="Monthly Transport Cost"
+                  variant="outlined"
+                  name="transport_amount"
+                  value={formData.transport_amount}
+                  onChange={handleChange}
+                  fullWidth
+                  type="number"
+                  inputProps={{ min: 0 }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3498db",
+                        boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      },
+                      "&:hover fieldset": { borderColor: "#5dade2" },
+                    },
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  size="small"
+                  label="Other One-Time Amount"
+                  variant="outlined"
+                  name="other_amount"
+                  value={formData.other_amount}
+                  onChange={handleChange}
+                  fullWidth
+                  type="number"
+                  inputProps={{ min: 0 }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3498db",
+                        boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      },
+                      "&:hover fieldset": { borderColor: "#5dade2" },
+                    },
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={4}>
                 <TextField
-                  label="Admission Fee (%)"
+                  size="small"
+                  label="Health Insurance (one time)"
                   variant="outlined"
-                  name="admission_fee_persentage_considered"
-                  value={formData.admission_fee_persentage_considered}
+                  name="health_insurance"
+                  value={formData.health_insurance}
                   onChange={handleChange}
                   fullWidth
-                  sx={{ backgroundColor: "#f5f5f5" }}
                   type="number"
+                  inputProps={{ min: 0 }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3498db",
+                        boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      },
+                      "&:hover fieldset": { borderColor: "#5dade2" },
+                    },
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  size="small"
+                  label="Uniform Cost (one time)"
+                  variant="outlined"
+                  name="living_expenses"
+                  value={formData.living_expenses}
+                  onChange={handleChange}
+                  fullWidth
+                  type="number"
+                  inputProps={{ min: 0 }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3498db",
+                        boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      },
+                      "&:hover fieldset": { borderColor: "#5dade2" },
+                    },
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  size="small"
+                  label="Books & Supplies (one time)"
+                  variant="outlined"
+                  name="food_and_necessities_expenses"
+                  value={formData.food_and_necessities_expenses}
+                  onChange={handleChange}
+                  fullWidth
+                  type="number"
+                  inputProps={{ min: 0 }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3498db",
+                        boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      },
+                      "&:hover fieldset": { borderColor: "#5dade2" },
+                    },
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  size="small"
+                  label="Birthday Gift"
+                  variant="outlined"
+                  name="birthday_gift"
+                  value={formData.birthday_gift}
+                  onChange={handleChange}
+                  fullWidth
+                  type="number"
+                  inputProps={{ min: 0 }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3498db",
+                        boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      },
+                      "&:hover fieldset": { borderColor: "#5dade2" },
+                    },
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={4}>
                 <TextField
-                  label="Education Fee Amount"
+                  size="small"
+                  label="Eid al-Fitr Gift"
                   variant="outlined"
-                  name="education_fee_considered"
-                  value={formData.education_fee_considered}
+                  name="eid_al_fitr_gift"
+                  value={formData.eid_al_fitr_gift}
                   onChange={handleChange}
                   fullWidth
-                  sx={{ backgroundColor: "#f5f5f5" }}
                   type="number"
+                  inputProps={{ min: 0 }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3498db",
+                        boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      },
+                      "&:hover fieldset": { borderColor: "#5dade2" },
+                    },
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={4}>
                 <TextField
-                  label="Education Fee (%)"
+                  size="small"
+                  label="Eid al-Adha Gift"
                   variant="outlined"
-                  name="education_fee_persentage_considered"
-                  value={formData.education_fee_persentage_considered}
+                  name="eid_al_adha_gift"
+                  value={formData.eid_al_adha_gift}
                   onChange={handleChange}
                   fullWidth
-                  sx={{ backgroundColor: "#f5f5f5" }}
                   type="number"
+                  inputProps={{ min: 0 }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3498db",
+                        boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      },
+                      "&:hover fieldset": { borderColor: "#5dade2" },
+                    },
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={4}>
                 <TextField
-                  label="Other Costs Amount"
+                  select
+                  label="Eid al-Fitr Month"
                   variant="outlined"
-                  name="other_cost_considered"
-                  value={formData.other_cost_considered}
+                  name="eid_al_fitr_month"
+                  value={formData.eid_al_fitr_month}
                   onChange={handleChange}
                   fullWidth
-                  sx={{ backgroundColor: "#f5f5f5" }}
-                  type="number"
-                />
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3498db",
+                        boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      },
+                      "&:hover fieldset": { borderColor: "#5dade2" },
+                    },
+                  }}
+                >
+                  {months.map((month) => (
+                    <MenuItem key={month.value} value={month.value}>
+                      {month.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  select
+                  label="Eid al-Adha Month"
+                  variant="outlined"
+                  name="eid_al_adha_month"
+                  value={formData.eid_al_adha_month}
+                  onChange={handleChange}
+                  fullWidth
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3498db",
+                        boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      },
+                      "&:hover fieldset": { borderColor: "#5dade2" },
+                    },
+                  }}
+                >
+                  {months.map((month) => (
+                    <MenuItem key={month.value} value={month.value}>
+                      {month.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
               </Grid>
               <Grid item xs={12} sm={4}>
                 <TextField
-                  label="Other Costs (%)"
-                  variant="outlined"
-                  name="other_cost_persentage_considered"
-                  value={formData.other_cost_persentage_considered}
-                  onChange={handleChange}
-                  fullWidth
-                  sx={{ backgroundColor: "#f5f5f5" }}
-                  type="number"
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <InputLabel shrink>
-                  No Of Years <span>*</span>
-                </InputLabel>
-                <TextField
+                  // size="small"
                   variant="outlined"
                   name="no_of_years"
+                  label="No Of Year"
                   value={formData.no_of_years}
                   onChange={handleChange}
                   select
@@ -414,7 +909,20 @@ const EditSelectDonorForm = ({
                   required={formData.trigger_projection === "Yes"}
                   error={!!fieldErrors.no_of_years}
                   helperText={fieldErrors.no_of_years}
-                  sx={{ backgroundColor: "#f5f5f5" }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      transition:
+                        "border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out",
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3498db",
+                        boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "#5dade2",
+                      },
+                    },
+                  }}
                 >
                   {[1, 2, 3, 4, 5].map((year) => (
                     <MenuItem key={year} value={year}>
@@ -424,6 +932,8 @@ const EditSelectDonorForm = ({
                 </TextField>
               </Grid>
 
+              {/* The following Grid items are commented out as per the instruction "the commented fields should be ignore" */}
+              {/*
               <Grid item xs={12} sm={4}>
                 <InputLabel shrink>
                   No Of Semesters/Months <span>*</span>
@@ -438,7 +948,6 @@ const EditSelectDonorForm = ({
                   required={formData.trigger_projection === "Yes"}
                   error={!!fieldErrors.no_of_semesters}
                   helperText={fieldErrors.no_of_semesters}
-                  sx={{ backgroundColor: "#f5f5f5" }}
                 >
                   {[...Array(12).keys()].map((i) => (
                     <MenuItem key={i + 1} value={i + 1}>
@@ -449,28 +958,24 @@ const EditSelectDonorForm = ({
               </Grid>
 
               <Grid item xs={12} sm={4}>
+                <InputLabel shrink>
+                  {formData.semester_duration === "1"
+                    ? "Installments Per Month"
+                    : "Installments Per Semester"}
+                </InputLabel>
                 <TextField
-                  label={
-                    formData.semester_duration === "1"
-                      ? "Installments Per Month"
-                      : "Installments Per Semester"
-                  }
                   variant="outlined"
                   name="installments_per_semester"
                   value={
                     formData.semester_duration === "1"
-                      ? "1"
+                      ? "1" // Auto-set to 1 when Month is selected
                       : formData.installments_per_semester
                   }
                   onChange={handleChange}
                   fullWidth
                   type="number"
-                  disabled={formData.semester_duration === "1"}
+                  disabled={formData.semester_duration === "1"} // Disable when Month is selected
                   inputProps={{ min: 1 }}
-                  required={formData.trigger_projection === "Yes"}
-                  error={!!fieldErrors.installments_per_semester}
-                  helperText={fieldErrors.installments_per_semester}
-                  sx={{ backgroundColor: "#f5f5f5" }}
                 />
               </Grid>
 
@@ -482,7 +987,10 @@ const EditSelectDonorForm = ({
                   name="semester_duration"
                   value={formData.semester_duration}
                   onChange={(e) => {
+                    // Update semester_duration
                     handleChange(e);
+
+                    // Auto-set installments to 1 when Month is selected
                     if (e.target.value === "1") {
                       setFormData((prev) => ({
                         ...prev,
@@ -492,93 +1000,152 @@ const EditSelectDonorForm = ({
                   }}
                   fullWidth
                   required
-                  error={!!fieldErrors.semester_duration}
-                  helperText={fieldErrors.semester_duration}
-                  sx={{ backgroundColor: "#f5f5f5" }}
                 >
                   <MenuItem value="1">Monthly Projection</MenuItem>
                   <MenuItem value="6">Semester Projection</MenuItem>
                 </TextField>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              */}
+
+              <Grid item xs={12} sm={12}>
                 <TextField
                   select
-                  label="Generate Auto Projection Sheet"
+                  size="small"
+                  label="Generate auto Projection sheet"
                   variant="outlined"
                   name="trigger_projection"
                   value={formData.trigger_projection}
                   onChange={handleChange}
                   fullWidth
-                  sx={{ backgroundColor: "#f5f5f5" }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      transition:
+                        "border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out",
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3498db",
+                        boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "#5dade2",
+                      },
+                    },
+                  }}
                 >
                   <MenuItem value="Yes">Yes</MenuItem>
                   <MenuItem value="No">No</MenuItem>
                 </TextField>
               </Grid>
               <Grid item xs={12} sm={12}>
-                <InputLabel shrink>Date Since Sponsorship Commenced</InputLabel>
+                <InputLabel
+                  shrink
+                  sx={{ fontWeight: 600, color: "#2c3e50", marginBottom: 0.5 }}
+                >
+                  Start Date of Sponsorship
+                </InputLabel>
                 <TextField
                   type="date"
+                  size="small"
                   variant="outlined"
                   name="selection_date"
                   value={formData.selection_date}
                   onChange={handleChange}
                   fullWidth
                   required
-                  sx={{ backgroundColor: "#f5f5f5" }}
+                  InputLabelProps={{
+                    shrink: true, // Ensure label is always shrunk for date input
+                  }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      transition:
+                        "border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out",
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#3498db",
+                        boxShadow: "0 0 0 2px rgba(52, 152, 219, 0.2)",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "#5dade2",
+                      },
+                    },
+                  }}
                 />
               </Grid>
             </Grid>
-
-            <div
-              style={{
-                marginTop: "20px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-end",
-              }}
+            <Grid
+              container
+              justifyContent="space-between"
+              sx={{ marginTop: 4 }}
             >
               <Button
                 variant="contained"
                 sx={{
-                  backgroundColor: "#00796b",
-                  "&:hover": { backgroundColor: "#004d40" },
+                  backgroundColor: "#28a745", // Modern green for primary action
+                  color: "white",
+                  padding: "12px 25px",
+                  borderRadius: 2,
+                  fontWeight: 600,
+                  textTransform: "none",
+                  boxShadow: "0 4px 10px rgba(40, 167, 69, 0.2)",
+                  transition:
+                    "background-color 0.3s ease-in-out, transform 0.2s ease-in-out, box-shadow 0.3s ease-in-out",
+                  "&:hover": {
+                    backgroundColor: "#218838", // Darker green on hover
+                    transform: "translateY(-2px)", // Slight lift
+                    boxShadow: "0 6px 15px rgba(40, 167, 69, 0.3)",
+                  },
+                  "&:active": {
+                    transform: "translateY(0)", // Press down effect
+                  },
                 }}
-                onClick={handleSubmit}
+                type="submit"
               >
-                Submit
+                Assign Donor
               </Button>
               <Button
-                variant="outlined"
+                variant="contained"
                 sx={{
-                  borderColor: "#1fb8c3",
-                  color: "#1fb8c3",
-                  marginLeft: 2,
+                  backgroundColor: "#007bff", // Modern blue for secondary action
+                  color: "white",
+                  padding: "12px 25px",
+                  borderRadius: 2,
+                  fontWeight: 600,
+                  textTransform: "none",
+                  boxShadow: "0 4px 10px rgba(0, 123, 255, 0.2)",
+                  transition:
+                    "background-color 0.3s ease-in-out, transform 0.2s ease-in-out, box-shadow 0.3s ease-in-out",
                   "&:hover": {
-                    borderColor: "#1fb8c3",
-                    backgroundColor: "#e0f7fa",
+                    backgroundColor: "#0056b3", // Darker blue on hover
+                    transform: "translateY(-2px)",
+                    boxShadow: "0 6px 15px rgba(0, 123, 255, 0.3)",
+                  },
+                  "&:active": {
+                    transform: "translateY(0)",
                   },
                 }}
                 onClick={handleAddDonorClick}
               >
-                Add Donor
+                Add New Donor
               </Button>
-            </div>
+            </Grid>
           </form>
         )}
       </Paper>
       <Snackbar
         anchorOrigin={{
           vertical: "bottom",
-          horizontal: "left",
+          horizontal: "center", // Centered horizontally
         }}
         open={snackbarOpen}
         autoHideDuration={3000}
         onClose={handleCloseSnackbar}
+        TransitionComponent={Transition} // Apply slide transition
       >
         <SnackbarContent
           sx={{
-            backgroundColor: "#43a047",
+            backgroundColor: "#43a047", // Success green
+            borderRadius: 2, // Rounded corners for snackbar
+            fontWeight: 500,
           }}
           message="Updated successfully!"
         />
@@ -587,54 +1154,79 @@ const EditSelectDonorForm = ({
       <Dialog
         open={infoDialogOpen}
         onClose={handleInfoDialogClose}
+        TransitionComponent={Transition} // Apply slide transition
+        aria-labelledby="projection-info-dialog-title"
         sx={{
-          "& .MuiDialog-paper": { borderRadius: 3, padding: 2, maxWidth: 600 },
+          "& .MuiDialog-paper": {
+            borderRadius: 3,
+            padding: 2,
+            maxWidth: 600,
+            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2)", // Deeper shadow for dialog
+          },
         }}
       >
         <DialogTitle
-          sx={{ fontWeight: 600, fontSize: "1.5rem", color: "#1A1A1A" }}
+          id="projection-info-dialog-title"
+          sx={{
+            fontWeight: 700,
+            fontSize: "1.8rem", // Larger title
+            color: "#1A1A1A",
+            borderBottom: "1px solid #eee", // Subtle separator
+            paddingBottom: 2,
+            marginBottom: 2,
+          }}
         >
-          How Auto Generate Projections Work
+          How Projection Generation Works
         </DialogTitle>
+
         <DialogContent sx={{ padding: 3 }}>
           <Typography
             variant="body1"
-            sx={{ color: "#4A4A4A", lineHeight: 1.6, mb: 3 }}
+            sx={{ color: "#4A4A4A", lineHeight: 1.7, mb: 3 }}
           >
-            Your inputs shape the financial projections for your program,
-            creating a clear payment schedule based on your choices.
+            This feature auto-generates a monthly financial projection sheet
+            based on your provided costs. The system uses your inputs to build a
+            clear payment plan across the academic period.
           </Typography>
 
           <Box sx={{ mb: 3 }}>
             <Typography
               variant="h6"
-              sx={{ fontWeight: 500, color: "#1A1A1A", mb: 1 }}
+              sx={{ fontWeight: 600, color: "#1A1A1A", mb: 1 }}
             >
-              Your Inputs
+              Core Inputs
             </Typography>
-            <Box component="ul" sx={{ pl: 2, color: "#4A4A4A" }}>
+            <Box
+              component="ul"
+              sx={{ pl: 2, color: "#4A4A4A", lineHeight: 1.6 }}
+            >
               <li>
-                <strong>Duration</strong>: Sets if your program is monthly (1
-                month) or semester-based (e.g., 6 months).
+                <strong>Application</strong>: Links the donor support to a
+                student’s application.
               </li>
               <li>
-                <strong>Program Years</strong>: Total duration of the program.
+                <strong>Donor</strong>: The person or organization funding the
+                support.
               </li>
               <li>
-                <strong>Semesters/Months</strong>: Number of semesters or months
-                in the program.
+                <strong>No. of Years</strong>: Total academic duration (used to
+                calculate months).
               </li>
               <li>
-                <strong>Installments</strong>: Payments per semester (for
-                semester-based programs).
+                <strong>Start Date</strong>: The date classes begin — sets the
+                timeline base.
               </li>
               <li>
-                <strong>Fees & Contributions</strong>: Admission, education, and
-                other fees, plus the sponsor’s percentage for each.
+                <strong>Monthly Costs</strong>: Includes tuition and transport
+                paid every month.
               </li>
               <li>
-                <strong>Start Date</strong>: Program start, anchoring payment
-                due dates.
+                <strong>One-Time Costs</strong>: Special payments like
+                admission, health, Eid, birthday, etc.
+              </li>
+              <li>
+                <strong>Trigger Projection</strong>: If set to "Yes",
+                projections are generated immediately.
               </li>
             </Box>
           </Box>
@@ -642,23 +1234,23 @@ const EditSelectDonorForm = ({
           <Box sx={{ mb: 3 }}>
             <Typography
               variant="h6"
-              sx={{ fontWeight: 500, color: "#1A1A1A", mb: 1 }}
+              sx={{ fontWeight: 600, color: "#1A1A1A", mb: 1 }}
             >
-              Monthly Programs
+              Monthly Logic
             </Typography>
-            <Box component="ul" sx={{ pl: 2, color: "#4A4A4A" }}>
+            <Box
+              component="ul"
+              sx={{ pl: 2, color: "#4A4A4A", lineHeight: 1.6 }}
+            >
               <li>
-                Kicks in when Select Monthly is{" "}
-                <strong>(No of years X no of months)</strong>.
+                Projections are created for every month over the program’s
+                duration.
               </li>
-              <li>One payment per month for the program’s duration.</li>
+              <li>Tuition and transport are repeated monthly.</li>
               <li>
-                <strong>Admission Fee</strong>: Added to the first month’s
-                payment (if set), using the sponsor’s percentage.
-              </li>
-              <li>
-                <strong>Education & Other Fees</strong>: Split evenly across all
-                months, based on sponsor percentages.
+                <strong>Admission Fee</strong> and{" "}
+                <strong>Other One-Time Cost</strong> are added only in the 1st
+                month.
               </li>
             </Box>
           </Box>
@@ -666,30 +1258,25 @@ const EditSelectDonorForm = ({
           <Box sx={{ mb: 3 }}>
             <Typography
               variant="h6"
-              sx={{ fontWeight: 500, color: "#1A1A1A", mb: 1 }}
+              sx={{ fontWeight: 600, color: "#1A1A1A", mb: 1 }}
             >
-              Semester-Based Programs
+              Special Month Triggers
             </Typography>
-            <Box component="ul" sx={{ pl: 2, color: "#4A4A4A" }}>
+            <Box
+              component="ul"
+              sx={{ pl: 2, color: "#4A4A4A", lineHeight: 1.6 }}
+            >
               <li>
-                Applies when semester duration exceeds 1 month (e.g., 2 or 6
-                months).
+                <strong>Health Insurance, Uniform, and Supplies</strong> — added
+                only in the 1st month.
               </li>
               <li>
-                Payments split into installments per semester, based on your
-                input.
+                <strong>Eid Gifts</strong> — added only in the selected Eid
+                months (1–12).
               </li>
               <li>
-                <strong>Admission Fee</strong>: Added to the first installment
-                of the first semester (if set).
-              </li>
-              <li>
-                <strong>Education & Other Fees</strong>: Spread across semesters
-                and installments, using sponsor percentages.
-              </li>
-              <li>
-                Estimated dates of Payment align with semester duration and
-                installment frequency, starting from the program’s start date.
+                <strong>Birthday Gift</strong> — added in the month matching the
+                student’s birth month.
               </li>
             </Box>
           </Box>
@@ -697,45 +1284,23 @@ const EditSelectDonorForm = ({
           <Box sx={{ mb: 3 }}>
             <Typography
               variant="h6"
-              sx={{ fontWeight: 500, color: "#1A1A1A", mb: 1 }}
-            >
-              Fee Breakdown
-            </Typography>
-            <Box component="ul" sx={{ pl: 2, color: "#4A4A4A" }}>
-              <li>
-                <strong>Sponsor Contributions</strong>: Only the percentages you
-                set for each fee (admission, education, other) are included.
-              </li>
-              <li>
-                <strong>Total Payment</strong>: Combines sponsor contributions
-                for each fee per payment.
-              </li>
-              <li>
-                Fees are evenly distributed across months or
-                semesters/installments.
-              </li>
-            </Box>
-          </Box>
-
-          <Box sx={{ mb: 3 }}>
-            <Typography
-              variant="h6"
-              sx={{ fontWeight: 500, color: "#1A1A1A", mb: 1 }}
+              sx={{ fontWeight: 600, color: "#1A1A1A", mb: 1 }}
             >
               Good to Know
             </Typography>
-            <Box component="ul" sx={{ pl: 2, color: "#4A4A4A" }}>
+            <Box
+              component="ul"
+              sx={{ pl: 2, color: "#4A4A4A", lineHeight: 1.6 }}
+            >
               <li>
-                Update inputs and select “Yes” to regenerate projections—old
-                ones are cleared for accuracy.
+                Each month's projection includes comments showing added one-time
+                items.
               </li>
               <li>
-                First payment aligns with the program’s start date; others
-                follow the schedule.
+                Projections are automatically recalculated if updated and
+                resubmitted with "Yes".
               </li>
-              <li>
-                Percentages are displayed in projections for full transparency.
-              </li>
+              <li>Only fixed amounts are used — no percentage calculations.</li>
             </Box>
           </Box>
 
@@ -743,11 +1308,14 @@ const EditSelectDonorForm = ({
             variant="body2"
             sx={{ color: "#6B7280", fontStyle: "italic", mt: 2 }}
           >
-            Pro Tip: Tweak fees, percentages, or durations anytime to update
-            your projections instantly.
+            Pro Tip: Keep Eid and birthday months in mind for accurate gift
+            scheduling.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ padding: 2 }}>
+
+        <DialogActions
+          sx={{ padding: 2, borderTop: "1px solid #eee", paddingTop: 2 }}
+        >
           <Button
             onClick={handleInfoDialogClose}
             variant="contained"
@@ -755,7 +1323,16 @@ const EditSelectDonorForm = ({
               borderRadius: 2,
               textTransform: "none",
               backgroundColor: "#3B82F6",
-              "&:hover": { backgroundColor: "#2563EB" },
+              padding: "10px 20px",
+              fontWeight: 600,
+              boxShadow: "0 2px 8px rgba(59, 130, 246, 0.2)",
+              transition:
+                "background-color 0.3s ease-in-out, transform 0.2s ease-in-out, box-shadow 0.3s ease-in-out",
+              "&:hover": {
+                backgroundColor: "#2563EB",
+                transform: "translateY(-1px)",
+                boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
+              },
             }}
           >
             Got It

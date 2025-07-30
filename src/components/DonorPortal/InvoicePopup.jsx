@@ -20,8 +20,8 @@ import {
 import paidlogo from "../../assets/2.png";
 
 const InvoicePopup = ({ isOpen, onClose, invoiceData }) => {
-  // const BASE_URL = "http://127.0.0.1:8000";
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL = "http://127.0.0.1:8000";
+  // const BASE_URL = "https://zeenbackend-production.up.railway.app";
   const handlePrint = () => {
     window.print();
   };

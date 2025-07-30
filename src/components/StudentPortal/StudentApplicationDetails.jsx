@@ -1,3 +1,4 @@
+import { BorderBottom } from "@mui/icons-material";
 import {
   Box,
   Paper,
@@ -14,16 +15,64 @@ import {
   Grid,
   Card,
   CardContent,
+  styled,
+  Container,
+  Divider,
 } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom"; // Import useHistory
+
+// --- Glass Lavender + Midnight Mode ---
+const primaryColor = "#312E81"; // Indigo-900 for nav
+const secondaryColor = "#A78BFA"; // Light violet
+const accentColor = "#8B5CF6"; // Purple-500 for buttons
+const bgColor = "rgba(255, 255, 255, 0.5)"; // Translucent base
+const cardBg = "rgba(255, 255, 255, 0.65)";
+const textColor = "#1E1B4B"; // Deep indigo for text
+const headerBg = "rgba(243, 232, 255, 0.25)";
+
+// Styled components
+const StyledContainer = styled(Container)(({ theme }) => ({
+  marginTop: theme.spacing(4),
+  animation: `${fadeIn} 0.8s ease`,
+}));
+
+const FormPaper = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(4),
+  borderRadius: "16px",
+  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
+  background: "#ffffff",
+}));
+
+const StyledTabs = styled(Tabs)(({ theme }) => ({
+  width: "100%", // Ensures full width
+  marginTop: theme.spacing(2),
+  "& .MuiTabs-indicator": {
+    height: 6,
+    background: "linear-gradient(90deg, #4361ee, #3a0ca3)",
+    borderRadius: "2px",
+  },
+}));
+
+const StyledTab = styled(Tab)(({ theme }) => ({
+  fontWeight: 600,
+  color: "#64748b",
+  textTransform: "capitalize",
+  fontSize: "0.9rem",
+  "&.Mui-selected": {
+    color: "#4361ee",
+    backgroundColor: "rgba(67, 97, 238, 0.08)",
+  },
+  transition: "all 0.3s ease",
+}));
 
 const StudentApplicationDetails = () => {
   const [studentDetails, setStudentDetails] = useState(null);
   const [projections, setProjections] = useState([]);
   const [studentId, setStudentId] = useState("");
   // const BASE_URL = "http://127.0.0.1:8000";
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
   const [activeTab, setActiveTab] = useState(0);
   const navigate = useNavigate(); // Initialize useHistory
   useEffect(() => {
@@ -55,468 +104,436 @@ const StudentApplicationDetails = () => {
   };
 
   const headerStyle = {
-    padding: 1,
-    backgroundColor: "#12b4bf",
-    color: "white",
+    color: accentColor,
     fontWeight: "bold",
     textAlign: "center",
-    borderRadius: 2,
-    boxShadow: "0px 2px 4px rgba(0,0,0,0.2)",
   };
-  const fetchStudentDetails = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const storedStudentId = localStorage.getItem("studentId");
-      if (!token || !storedStudentId) {
-        console.error("Token not available or missing studentId.");
-        return;
-      }
-      setStudentId(storedStudentId);
-      const response = await fetch(
-        `${BASE_URL}/api/studentDetails/${storedStudentId}/`,
-        {
-          headers: {
-            Authorization: `Token ${token}`,
-          },
+
+  const textStyle = {
+    fontWeight: 700,
+    fontSize: "14px",
+  };
+
+  useEffect(() => {
+    const fetchStudentDetails = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const storedStudentId = localStorage.getItem("studentId");
+        if (!token || !storedStudentId) {
+          console.error("Token not available or missing studentId.");
+          return;
         }
-      );
+        setStudentId(storedStudentId);
 
-      if (!response.ok) {
-        console.error("Error fetching student details:", response.statusText);
-        return;
+        const response = await fetch(
+          `${BASE_URL}/api/studentDetails/${storedStudentId}/`,
+          {
+            headers: {
+              Authorization: `Token ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            // Optionally handle student not found
+            navigate("/student/addapplication");
+          } else {
+            console.error(
+              "Error fetching student details:",
+              response.statusText
+            );
+          }
+          return;
+        }
+
+        const data = await response.json();
+
+        // Redirect if student has no applications
+        if (!data.applications || data.applications.length === 0) {
+          navigate("/student/addapplication");
+          return;
+        }
+
+        setStudentDetails({
+          ...data,
+          ...data.applications[data.applications.length - 1],
+        });
+        setProjections(data.projections || []);
+      } catch (error) {
+        console.error("Error fetching student details:", error);
       }
+    };
 
-      const data = await response.json();
-      setStudentDetails(data);
-      console.log(studentDetails);
-      setProjections(data.projections || []);
-    } catch (error) {
-      console.error("Error fetching student details:", error);
-    }
-  };
-
-  useEffect(() => {
     fetchStudentDetails();
-  }, []);
-  console.log(studentDetails);
-  useEffect(() => {
-    if (studentDetails && studentDetails.applications.length === 0) {
-      navigate("/student/addapplication"); // Redirect to addApplicationForm route
-    }
-  }, [studentDetails, navigate]);
+  }, [navigate]);
 
   return (
     <div className="h-screen">
-      <Tabs
-        value={activeTab}
-        onChange={handleTabChange}
-        variant="scrollable"
-        scrollButtons="auto"
-        sx={{
-          marginTop: 1,
-          width: "99%",
-        }}
-      >
-        <Tab
-          label="Informations"
-          sx={{
-            // backgroundColor: "#ff8a35",
-            fontWeight: "bold",
-            backgroundColor: activeTab === 0 ? "#DCD7D7" : "#436850",
-            borderTopLeftRadius: "5px",
-            // color: "white",
-            flex: 1,
-          }}
-        />
-        <Tab
-          label="Statements"
-          sx={{
-            // backgroundColor: "#ff8a35",
-            fontWeight: "bold",
-            backgroundColor: activeTab === 1 ? "#DCD7D7" : "#436850",
+      <Box sx={{ width: "100%" }}>
+        <StyledTabs
+          value={activeTab}
+          onChange={handleTabChange}
+          variant="scrollable"
+          scrollButtons="auto"
+        >
+          <StyledTab label="Informations" />
+          <StyledTab label="Statements" />
+          <StyledTab label="Documents" />
+        </StyledTabs>
+      </Box>
 
-            // color: "white",
-            flex: 1,
-          }}
-        />
-        <Tab
-          label="Documents"
-          sx={{
-            // backgroundColor: "#ff8a35",
-            fontWeight: "bold",
-            backgroundColor: activeTab === 2 ? "#DCD7D7" : "#436850",
-            // color: "white",
-            flex: 1,
-          }}
-        />
-      </Tabs>
       {activeTab === 0 && (
         <Paper
-          sx={{ marginTop: 0.2, padding: 1, borderRadius: 3, width: "100%" }}
+          sx={{
+            marginTop: 0.2,
+            padding: 1,
+            borderRadius: 3,
+            width: "100%",
+            paddingBottom: 18,
+          }}
         >
           <Box>
             {/* Header */}
-            <Box sx={headerStyle}>
-              <Typography variant="h6">Student Details</Typography>
-            </Box>
+            <Box
+              sx={{
+                ...headerStyle,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 2,
+              }}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                Personal Info
+              </Typography>
 
-            {/* Name and Status Row */}
-            <Grid container spacing={2} sx={{ marginTop: 0.2 }}>
-              <Grid item xs={12} md={6}>
-                <Box sx={columnStyle}>
-                  <Typography variant="subtitle1">Name</Typography>
-                  <Typography>{studentDetails?.student_name}</Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Box sx={columnStyle}>
-                  <Typography variant="subtitle1">Status</Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.status}
-                  </Typography>
-                </Box>
-              </Grid>
-            </Grid>
-
-            {/* Personal Information */}
-            <Box sx={headerStyle} mt={3}>
-              <Typography>Personal Information</Typography>
+              {studentDetails?.education_status && (
+                <Typography
+                  align="center"
+                  sx={{
+                    color: "green",
+                    fontWeight: "bold",
+                    border: ".5px solid green",
+                    borderRadius: "8px",
+                    padding: "2px 4px",
+                    backgroundColor: "#e6f4ea",
+                    display: "inline-block",
+                  }}
+                >
+                  {studentDetails.education_status}
+                </Typography>
+              )}
             </Box>
+            <Divider
+              sx={{
+                width: "100%",
+                mt: 1,
+                borderBottomWidth: 1,
+                borderColor: accentColor,
+              }}
+            />
+
+            {/* persnal info */}
             <Grid container spacing={2} sx={{ marginTop: 2 }}>
               <Grid item xs={12} md={4}>
                 <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">Father Name</Typography>
+                  <Typography variant="subtitle1" sx={textStyle}>
+                    Name
+                  </Typography>
+                  <Typography>{studentDetails?.student_name}</Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Box sx={columnStyle}>
+                  <Typography variant="subtitle1" sx={textStyle}>
+                    Status
+                  </Typography>
+                  <Typography>{studentDetails?.status}</Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Box sx={columnStyle}>
+                  <Typography variant="subtitle2" sx={textStyle}>
+                    Father Name
+                  </Typography>
                   <Typography>{studentDetails?.father_name}</Typography>
                 </Box>
               </Grid>
               <Grid item xs={12} md={4}>
                 <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">Last Name</Typography>
+                  <Typography variant="subtitle2" sx={textStyle}>
+                    Last Name
+                  </Typography>
                   <Typography>{studentDetails?.last_name}</Typography>
                 </Box>
               </Grid>
               <Grid item xs={12} md={4}>
                 <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">Date of Birth</Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.date_of_birth}
+                  <Typography variant="subtitle2" sx={textStyle}>
+                    Date of Birth
                   </Typography>
+                  <Typography>{studentDetails?.date_of_birth}</Typography>
                 </Box>
               </Grid>
               <Grid item xs={12} md={4}>
                 <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">Age</Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.age}
+                  <Typography variant="subtitle2" sx={textStyle}>
+                    Age
                   </Typography>
+                  <Typography>{studentDetails?.age}</Typography>
                 </Box>
               </Grid>
               <Grid item xs={12} md={4}>
                 <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">Gender</Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.gender}
+                  <Typography variant="subtitle2" sx={textStyle}>
+                    Gender
                   </Typography>
+                  <Typography>{studentDetails?.gender}</Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Box sx={columnStyle}>
+                  <Typography variant="subtitle2" sx={textStyle}>
+                    Mobile No
+                  </Typography>
+                  <Typography>{studentDetails?.mobile_no}</Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Box sx={columnStyle}>
+                  <Typography variant="subtitle2" sx={textStyle}>
+                    CNIC / B-FORM
+                  </Typography>
+                  <Typography>{studentDetails?.cnic_or_b_form}</Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Box sx={columnStyle}>
+                  <Typography variant="subtitle2" sx={textStyle}>
+                    Email
+                  </Typography>
+                  <Typography>{studentDetails?.email}</Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Box sx={columnStyle}>
+                  <Typography variant="subtitle2" sx={textStyle}>
+                    Country
+                  </Typography>
+                  <Typography>{studentDetails?.country}</Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Box sx={columnStyle}>
+                  <Typography variant="subtitle2" sx={textStyle}>
+                    Province
+                  </Typography>
+                  <Typography>{studentDetails?.province}</Typography>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <Box sx={columnStyle}>
+                  <Typography variant="subtitle2" sx={textStyle}>
+                    City
+                  </Typography>
+                  <Typography>{studentDetails?.city}</Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={8}>
+                <Box sx={columnStyle}>
+                  <Typography sx={textStyle}>Address</Typography>
+                  <Typography>{studentDetails?.address}</Typography>
                 </Box>
               </Grid>
             </Grid>
-
-            {/* Contact Information */}
-            <Box sx={headerStyle} mt={3}>
-              <Typography>Contact Information</Typography>
-            </Box>
-            <Grid container spacing={2} sx={{ marginTop: 0.2 }}>
-              <Grid item xs={12} md={4}>
-                <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">Mobile No</Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.mobile_no}
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">CNIC / B-FORM</Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.cnic_or_b_form}
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">Email</Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.email}
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">Country</Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.country}
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">Province</Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.province}
-                  </Typography>
-                </Box>
-              </Grid>
-
-              <Grid item xs={12} md={4}>
-                <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">City</Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.city}
-                  </Typography>
-                </Box>
-              </Grid>
-            </Grid>
-
-            {/* Address */}
-            <Box
-              sx={{ ...columnStyle, backgroundColor: "#f5f0f0", marginTop: 3 }}
-            >
-              <Typography>Address</Typography>
-              <Typography>
-                {studentDetails?.applications[0]?.address}
-              </Typography>
-            </Box>
 
             {/* Educational Information */}
-            <Box sx={headerStyle} mt={3}>
-              <Typography>Educational Information</Typography>
+            <Box
+              sx={{
+                ...headerStyle,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 2,
+                marginTop: "10px",
+              }}
+            >
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  Educational Information
+                </Typography>
+              </Box>
             </Box>
+            <Divider
+              sx={{
+                width: "100%",
+                mt: 1,
+                borderBottomWidth: 1,
+                borderColor: accentColor,
+              }}
+            />
             <Grid container spacing={2} sx={{ marginTop: 0.2 }}>
-              <Grid item xs={12} md={3}>
+              <Grid item xs={12} md={4}>
                 <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">Current Level</Typography>
+                  <Typography variant="subtitle2" sx={textStyle}>
+                    Current Level
+                  </Typography>
                   <Typography>
-                    {
-                      studentDetails?.applications[0]
-                        ?.current_level_of_education
-                    }
+                    {studentDetails?.current_level_of_education}
                   </Typography>
                 </Box>
               </Grid>
               <Grid item xs={12} md={4}>
                 <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">
+                  <Typography variant="subtitle2" sx={textStyle}>
                     Program Interested In
                   </Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.program_interested_in}
-                  </Typography>
+                  <Typography>{studentDetails?.grade_interested_in}</Typography>
                 </Box>
               </Grid>
-              <Grid item xs={12} md={5}>
+              <Grid item xs={12} md={4}>
                 <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">
+                  <Typography variant="subtitle2" sx={textStyle}>
                     Institution Interested In
                   </Typography>
                   <Typography>
-                    {studentDetails?.applications[0]?.institution_interested_in}
+                    {studentDetails?.institution_interested_in}
                   </Typography>
                 </Box>
               </Grid>
-              <Grid item xs={12} md={3}>
+              <Grid item xs={12} md={4}>
                 <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">No Of Years</Typography>
+                  <Typography variant="subtitle2" sx={textStyle}>
+                    No Of Years
+                  </Typography>
+                  <Typography>{studentDetails?.no_of_years}</Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Box sx={columnStyle}>
+                  <Typography variant="subtitle2" sx={textStyle}>
+                    No Of Semesters
+                  </Typography>
+                  <Typography>{studentDetails?.no_of_semesters}</Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Box sx={columnStyle}>
+                  <Typography variant="subtitle2" sx={textStyle}>
+                    No Of Semesters
+                  </Typography>
                   <Typography>
-                    {studentDetails?.applications[0]?.no_of_years}
+                    {studentDetails?.program_addmision_date}
                   </Typography>
                 </Box>
               </Grid>
-              <Grid item xs={12} md={3}>
+              <Grid item xs={12} md={4}>
                 <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">No Of Semesters</Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.no_of_semesters}
+                  <Typography variant="subtitle2" sx={textStyle}>
+                    No Of Semesters
                   </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">No Of Semesters</Typography>
                   <Typography>
-                    {studentDetails?.applications[0]?.program_addmision_date}
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">No Of Semesters</Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.classes_commencement_date}
+                    {studentDetails?.classes_commencement_date}
                   </Typography>
                 </Box>
               </Grid>
             </Grid>
+
             {/*  Financial Information */}
-            <Box sx={headerStyle} mt={3}>
-              <Typography> Financial Information</Typography>
+            <Box
+              sx={{
+                ...headerStyle,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 2,
+                marginTop: "10px",
+              }}
+            >
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  Financial Information
+                </Typography>
+              </Box>
             </Box>
+            <Divider
+              sx={{
+                width: "100%",
+                mt: 1,
+                borderBottomWidth: 1,
+                borderColor: accentColor,
+              }}
+            />
             <Grid container spacing={2} sx={{ marginTop: 0.1 }}>
               <Grid item xs={12} md={3}>
                 <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">
+                  <Typography variant="subtitle2" sx={textStyle}>
                     Addmission Fee Of Program
                   </Typography>
                   <Typography>
-                    {
-                      studentDetails?.applications[0]
-                        ?.admission_fee_of_the_program
-                    }
+                    {studentDetails?.admission_fee_of_the_program}
                   </Typography>
                 </Box>
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">
+                  <Typography variant="subtitle2" sx={textStyle}>
                     {" "}
                     Total Fee Of Program
                   </Typography>
                   <Typography>
-                    {studentDetails?.applications[0]?.total_fee_of_the_program}
+                    {studentDetails?.total_fee_of_the_program}
                   </Typography>
                 </Box>
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">
+                  <Typography variant="subtitle2" sx={textStyle}>
                     {" "}
                     Living Expenses / Year
                   </Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.living_expenses}
-                  </Typography>
+                  <Typography>{studentDetails?.living_expenses}</Typography>
                 </Box>
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">
+                  <Typography variant="subtitle2" sx={textStyle}>
                     {" "}
                     Food And Necessities Expenses / Year
                   </Typography>
                   <Typography>
-                    {
-                      studentDetails?.applications[0]
-                        ?.food_and_necessities_expenses
-                    }
+                    {studentDetails?.food_and_necessities_expenses}
                   </Typography>
                 </Box>
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={3}>
                 <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">
+                  <Typography variant="subtitle2" sx={textStyle}>
                     {" "}
                     Transport Amount / Year
                   </Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.transport_amount}
-                  </Typography>
+                  <Typography>{studentDetails?.transport_amount}</Typography>
                 </Box>
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={3}>
                 <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">
+                  <Typography variant="subtitle2" sx={textStyle}>
                     {" "}
                     Other Cost / Year
                   </Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.other_amount}
-                  </Typography>
+                  <Typography>{studentDetails?.other_amount}</Typography>
                 </Box>
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={3}>
                 <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">
+                  <Typography variant="subtitle2" sx={textStyle}>
                     {" "}
                     Expected Sponsorship Amount
                   </Typography>
                   <Typography>
-                    {
-                      studentDetails?.applications[0]
-                        ?.expected_sponsorship_amount
-                    }
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">
-                    {" "}
-                    Addmission Fees Considered
-                  </Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.admission_fee_considered}
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">
-                    {" "}
-                    Addmission Fees Persentage Approved{" "}
-                  </Typography>
-                  <Typography>
-                    {
-                      studentDetails?.applications[0]
-                        ?.admission_fee_persentage_considered
-                    }
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">
-                    {" "}
-                    Education Fees considered
-                  </Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.education_fee_considered}
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">
-                    {" "}
-                    Education Fees Persentage Approved
-                  </Typography>
-                  <Typography>
-                    {
-                      studentDetails?.applications[0]
-                        ?.education_fee_persentage_considered
-                    }
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">
-                    Other Cost Approved{" "}
-                  </Typography>
-                  <Typography>
-                    {studentDetails?.applications[0]?.other_cost_considered}
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Box sx={columnStyle}>
-                  <Typography variant="subtitle2">
-                    {" "}
-                    Other Cost Persentage Consider{" "}
-                  </Typography>
-                  <Typography>
-                    {
-                      studentDetails?.applications[0]
-                        ?.other_cost_persentage_considered
-                    }
+                    {studentDetails?.expected_sponsorship_amount}
                   </Typography>
                 </Box>
               </Grid>
@@ -525,8 +542,16 @@ const StudentApplicationDetails = () => {
         </Paper>
       )}
       {activeTab === 1 && (
-        <Paper sx={{ marginTop: 0.2, width: "99%" }}>
-          <Box sx={{ borderRadius: 9 }}>
+        <Paper
+          sx={{
+            marginTop: 0.2,
+            padding: 1,
+            borderRadius: 3,
+            width: "100%",
+            paddingBottom: 18,
+          }}
+        >
+          <Box>
             {/* personal information tab */}
             <Box sx={headerStyle} mt={3}>
               <Typography sx={{ color: "white" }}>
@@ -540,31 +565,27 @@ const StudentApplicationDetails = () => {
                     Total Members Of HouseHold
                   </Typography>
                   <Typography>
-                    {studentDetails?.applications[0].total_members_of_household}
+                    {studentDetails?.total_members_of_household}
                   </Typography>
                 </Box>
               </Grid>
               <Grid item xs={12} md={4}>
                 <Box sx={columnStyle}>
                   <Typography variant="subtitle2">Expense / Month</Typography>
-                  <Typography>
-                    {studentDetails?.applications[0].expense_per_month}
-                  </Typography>
+                  <Typography>{studentDetails?.expense_per_month}</Typography>
                 </Box>
               </Grid>
               <Grid item xs={12} md={4}>
                 <Box sx={columnStyle}>
                   <Typography variant="subtitle2">Total Amount</Typography>
-                  <Typography>
-                    {studentDetails?.applications[0].total_amount}
-                  </Typography>
+                  <Typography>{studentDetails?.total_amount}</Typography>
                 </Box>
               </Grid>
               <Grid item xs={12} md={12}>
                 <Box sx={columnStyle}>
                   <Typography variant="subtitle2">Info Of HouseHold</Typography>
                   <Typography>
-                    {studentDetails?.applications[0].description_of_household}
+                    {studentDetails?.description_of_household}
                   </Typography>
                 </Box>
               </Grid>
@@ -580,9 +601,7 @@ const StudentApplicationDetails = () => {
                   <Typography variant="subtitle2">
                     Personal Statement
                   </Typography>
-                  <Typography>
-                    {studentDetails?.applications[0].personal_statement}
-                  </Typography>
+                  <Typography>{studentDetails?.personal_statement}</Typography>
                 </Box>
               </Grid>
             </Grid>
@@ -592,10 +611,11 @@ const StudentApplicationDetails = () => {
       {activeTab === 2 && (
         <Paper
           sx={{
-            marginTop: 2,
-            width: "99%",
-            padding: "20px",
-            borderRadius: "10px",
+            marginTop: 0.2,
+            padding: 1,
+            borderRadius: 3,
+            width: "100%",
+            paddingBottom: 18,
           }}
         >
           <Box sx={{ textAlign: "center", marginBottom: 3 }}>
@@ -620,7 +640,7 @@ const StudentApplicationDetails = () => {
                     Degree Documents:
                   </Typography>
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                    {studentDetails?.applications?.[0]?.degree_documents?.map(
+                    {studentDetails?.degree_documents?.map(
                       (document, index) => (
                         <Button
                           key={index}
@@ -654,7 +674,7 @@ const StudentApplicationDetails = () => {
                     Transcript Documents:
                   </Typography>
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                    {studentDetails?.applications?.[0]?.transcript_documents?.map(
+                    {studentDetails?.transcript_documents?.map(
                       (document, index) => (
                         <Button
                           key={index}
@@ -688,7 +708,7 @@ const StudentApplicationDetails = () => {
                     Income Statement Documents:
                   </Typography>
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                    {studentDetails?.applications?.[0]?.income_statement_documents?.map(
+                    {studentDetails?.income_statement_documents?.map(
                       (document, index) => (
                         <Button
                           key={index}
@@ -723,22 +743,19 @@ const StudentApplicationDetails = () => {
                   </Typography>
                   <Box sx={{ textAlign: "center" }}>
                     <img
-                      src={studentDetails?.applications?.[0]?.profile_picture}
+                      src={studentDetails?.profile_picture}
                       alt="Profile"
                       style={{ maxWidth: "100px", borderRadius: "8px" }}
                     />
-                    <Typography>
-                      <a
-                        href={
-                          studentDetails?.applications?.[0]?.profile_picture
-                        }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ textDecoration: "none", color: "#148581" }}
-                      >
-                        View Profile
-                      </a>
-                    </Typography>
+                    {/* 
+                    <a
+                      href={studentDetails?.[0]?.profile_picture}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ textDecoration: "none", color: "#148581" }}
+                    >
+                      View Profile
+                    </a> */}
                   </Box>
                 </CardContent>
               </Card>
@@ -769,8 +786,8 @@ const StudentApplicationDetails = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {studentDetails?.applications?.[0]?.degree ? (
-                    studentDetails.applications[0].degree.map((degree) => (
+                  {studentDetails?.degree ? (
+                    studentDetails.degree.map((degree) => (
                       <TableRow
                         key={degree.id}
                         sx={{

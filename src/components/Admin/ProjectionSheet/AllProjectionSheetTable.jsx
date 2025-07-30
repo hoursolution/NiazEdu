@@ -5,8 +5,8 @@ import styles from "../../DonorPortal/ProjectionSheetTable.module.css";
 import { useNavigate } from "react-router-dom";
 import ConfirmationDialog from "../Applications/ConfirmationDialog";
 const AllProjectionSheetTable = ({ studentId, refreshFlag }) => {
-  // const BASE_URL = "http://127.0.0.1:8000";
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL = "http://127.0.0.1:8000";
+  // const BASE_URL = "https://zeenbackend-production.up.railway.app";
   const [studentDetails, setStudentDetails] = useState(null);
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false); // State to manage the delete confirmation dialog
   const [deleteId, setDeleteId] = useState(null); // State to store the id

@@ -60,22 +60,16 @@ const CreateProgramForm = () => {
     <Container
       maxWidth="sm"
       sx={{
-        paddingTop: 5,
+        marginTop: 2,
       }}
     >
       <Paper elevation={3} style={{ padding: 20, marginBottom: 20 }}>
-        <Typography
-          variant="h4"
-          fontWeight={700}
-          className=" text-sky-950"
-          align="center"
-          gutterBottom
-        >
-          Add Program
+        <Typography variant="h4" align="center" gutterBottom>
+          ADD PROGRAM
         </Typography>
         <form onSubmit={handleSubmit}>
-          <Grid container spacing={3} sx={{ marginTop: 2 }}>
-            <Grid item xs={12} sm={12}>
+          <Grid container spacing={2} sx={{ marginTop: 2 }}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 label="Name"
                 variant="outlined"
@@ -86,7 +80,7 @@ const CreateProgramForm = () => {
                 required
               ></TextField>
             </Grid>
-            <Grid item xs={12} sm={12}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 label="Program Type"
                 variant="outlined"
@@ -102,7 +96,7 @@ const CreateProgramForm = () => {
               </TextField>
             </Grid>
 
-            <Grid item xs={12} sm={12}>
+            <Grid item xs={12} sm={6}>
               {/* <InputLabel shrink>Duration In Months</InputLabel> */}
               <TextField
                 type="number"
@@ -120,12 +114,7 @@ const CreateProgramForm = () => {
           </Grid>
 
           <div
-            style={{
-              marginTop: "20px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-            }}
+            style={{ marginTop: "20px", display: "flex", alignContent: "end" }}
           >
             <Button
               variant="contained"

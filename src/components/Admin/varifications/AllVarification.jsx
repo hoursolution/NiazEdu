@@ -5,7 +5,7 @@ import {
   GridToolbarContainer,
   GridToolbarDensitySelector,
 } from "@mui/x-data-grid";
-import styles from "../../Admin/Applications/AllApplication.module.css";
+import styles from "../../Admin/Applications/AllApplication.module.css"; // Keep if you have custom CSS, otherwise can be removed
 import {
   Box,
   Button,
@@ -16,42 +16,72 @@ import {
   FormControl,
   InputLabel,
   styled,
+  Typography, // Added Typography for status text
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import ConfirmationDialog from "../Applications/ConfirmationDialog";
-import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever"; // Not used, but kept for completeness
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
 import CancelIcon from "@mui/icons-material/Cancel";
-import InfoIcon from "@mui/icons-material/Info";
-import EditIcon from "@mui/icons-material/Edit";
+import InfoIcon from "@mui/icons-material/Info"; // Not used, but kept for completeness
+import EditIcon from "@mui/icons-material/Edit"; // Not used, but kept for completeness
 import { MdDelete, MdEdit } from "react-icons/md";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline"; // For Add Verification button
+import { motion } from "framer-motion"; // Import motion for animations
+import CircularProgress from "@mui/material/CircularProgress";
+
+// --- Glass Lavender + Midnight Mode ---
+const primaryColor = "#312E81"; // Indigo-900 for nav
+const secondaryColor = "#A78BFA"; // Light violet
+const accentColor = "#8B5CF6"; // Purple-500 for buttons
+const bgColor = "rgba(255, 255, 255, 0.5)"; // Translucent base
+const cardBg = "rgba(255, 255, 255, 0.65)";
+const textColor = "#1E1B4B"; // Deep indigo for text
+const headerBg = "rgba(243, 232, 255, 0.25)";
 
 // Custom GridToolbar with the "Projection" button
 const CustomToolbar = () => {
   return (
-    <GridToolbarContainer>
-      <GridToolbarColumnsButton />
-      <GridToolbarDensitySelector />
+    <GridToolbarContainer
+      sx={{
+        backgroundColor: cardBg, // Match table background
+        borderBottom: `1px solid ${headerBg}`,
+        padding: "8px",
+        borderRadius: "8px 8px 0 0", // Match table border radius
+      }}
+    >
+      <GridToolbarColumnsButton sx={{ color: textColor }} />
+      <GridToolbarDensitySelector sx={{ color: textColor }} />
     </GridToolbarContainer>
   );
 };
 
 // Custom styled DataGrid component
 const StyledDataGrid = styled(DataGrid)({
+  border: `1px solid ${cardBg}`, // Subtle border
+  borderRadius: "8px", // Rounded corners for the whole table
+  overflow: "hidden", // Ensures rounded corners are visible
+
   "& .MuiDataGrid-columnHeaders": {
-    backgroundColor: "#263238",
-    color: "white",
+    backgroundColor: headerBg, // Darker header background
+    color: textColor, // White text for headers
     fontSize: "13px",
-    textTransform: "capitalize",
+    textTransform: "uppercase", // More modern look
+    fontWeight: "bold",
+    borderBottom: `1px solid ${accentColor}`, // Accent line below headers
   },
   "& .MuiDataGrid-columnHeader": {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    borderLeft: "1px solid white",
+    borderLeft: `1px solid ${headerBg}`, // Subtle border between headers
     textAlign: "center",
     whiteSpace: "normal",
+    "&:first-of-type": {
+      // Remove left border for the first header
+      borderLeft: "none",
+    },
   },
   "& .MuiDataGrid-columnHeaderTitle": {
     whiteSpace: "normal",
@@ -63,7 +93,7 @@ const StyledDataGrid = styled(DataGrid)({
     textAlign: "center",
   },
   "& .MuiDataGrid-cell": {
-    borderLeft: "1px solid #aaa",
+    borderLeft: `1px solid #aaa`, // Subtle border between cells
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
@@ -73,12 +103,32 @@ const StyledDataGrid = styled(DataGrid)({
     lineHeight: 1.4,
     padding: "6px",
     fontSize: "12px",
-  },
-
-  "& .MuiDataGrid-row": {
-    "&:hover": {
-      backgroundColor: "rgba(0, 128, 0, 0.02)",
+    color: textColor, // Default cell text color
+    "&:first-of-type": {
+      // Remove left border for the first cell in a row
+      borderLeft: "none",
     },
+  },
+  "& .MuiDataGrid-row": {
+    backgroundColor: cardBg, // Dark background for rows
+    "&:nth-of-type(odd)": {
+      backgroundColor: "rgba(255, 255, 255, 0.65)", // Slightly different shade for odd rows (zebra striping)
+    },
+    "&:hover": {
+      backgroundColor: "rgba(59, 130, 246, 0.15)", // Accent color on hover
+    },
+  },
+  "& .MuiDataGrid-footerContainer": {
+    backgroundColor: headerBg, // Match header background for footer
+    color: textColor,
+    borderTop: `1px solid ${accentColor}`,
+    borderRadius: "0 0 8px 8px", // Match table border radius
+  },
+  "& .MuiTablePagination-root": {
+    color: textColor, // Pagination text color
+  },
+  "& .MuiSvgIcon-root": {
+    color: textColor, // Pagination icons color
   },
 });
 
@@ -89,6 +139,7 @@ const AllVarification = () => {
   const [statusFilter, setStatusFilter] = useState(""); // Default empty, shows all
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
@@ -96,7 +147,8 @@ const AllVarification = () => {
   });
   const navigate = useNavigate();
 
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
   // const BASE_URL = "http://127.0.0.1:8000";
 
   useEffect(() => {
@@ -104,6 +156,7 @@ const AllVarification = () => {
       .then((response) => response.json())
       .then((data) => {
         // Group by student full name
+        console.log(data);
         const grouped = {};
         data.forEach((item) => {
           const key = `${item.application.name} ${item.application.last_name}`;
@@ -142,6 +195,7 @@ const AllVarification = () => {
 
         setApplications(updatedData);
         setFilteredApplications(updatedData);
+        setLoading(false);
       })
       .catch((error) => {
         console.error("Error fetching applications:", error);
@@ -215,11 +269,15 @@ const AllVarification = () => {
       renderCell: (params) => {
         const name = params.row.verifier_name;
         const isSelected = !!name;
-
         return (
-          <span style={{ color: isSelected ? "#000" : "red" }}>
+          <Typography
+            sx={{
+              color: isSelected ? textColor : "#EF4444",
+              fontSize: "12px", // Add this to match cell font size
+            }}
+          >
             {isSelected ? name : "not selected"}
-          </span>
+          </Typography>
         );
       },
     },
@@ -230,53 +288,66 @@ const AllVarification = () => {
       headerAlign: "center",
       align: "center",
       renderCell: (params) => {
-        const name = params.row.verification_date;
-        const isSelected = !!name;
-
+        const date = params.row.verification_date;
+        const isSelected = !!date;
         return (
-          <span style={{ color: isSelected ? "#000" : "red" }}>
-            {isSelected ? name : "not selected"}
-          </span>
+          <Typography
+            sx={{
+              color: isSelected ? textColor : "#EF4444",
+              fontSize: "12px", // Add this to match cell font size
+            }}
+          >
+            {isSelected ? date : "not selected"}
+          </Typography>
         );
       },
     },
+
     {
-      field: "status",
+      field: "move_for_interview",
       headerName: "Status",
       flex: 1,
       minWidth: 200,
       headerAlign: "center",
       align: "center",
       renderCell: (params) => {
-        const status = params.row.status;
+        const status = params.row.move_for_interview;
         let buttonColor = "";
         let buttonIcon = null;
+        let statusTextColor = textColor;
+        let buttonText = ""; // Default text color
 
         switch (status) {
-          case "Accepted by verifier":
-            buttonColor = "#4CAF50"; // Green
+          case "yes":
+            buttonColor = "#10B981"; // Green
             buttonIcon = (
-              <CheckCircleIcon style={{ color: "#fff", fontSize: "12px" }} />
+              <CheckCircleIcon sx={{ color: "#fff", fontSize: "12px" }} />
             );
+            statusTextColor = "#10B981"; // Green text
+            buttonText = "Accepted";
             break;
 
           case "Pending":
-            buttonColor = "#2196F3"; // Blue
-            buttonIcon = (
-              <ErrorIcon style={{ color: "#fff", fontSize: "12px" }} />
-            );
+            buttonColor = "#F59E0B"; // Amber
+            buttonIcon = <ErrorIcon sx={{ color: "#fff", fontSize: "12px" }} />;
+            statusTextColor = "#F59E0B"; // Amber text
+            buttonText = "Pending";
             break;
 
-          case "Rejected by verifier":
-            buttonColor = "#F44336"; // Red
+          case "no":
+            buttonColor = "#EF4444"; // Red
             buttonIcon = (
-              <CancelIcon style={{ color: "#fff", fontSize: "12px" }} />
+              <CancelIcon sx={{ color: "#fff", fontSize: "12px" }} />
             );
+            statusTextColor = "#EF4444"; // Red text
+            buttonText = "Rejected";
             break;
 
           default:
             buttonColor = "#9E9E9E"; // Grey
             buttonIcon = null;
+            statusTextColor = "#9E9E9E"; // Grey text
+            buttonText = "Pending";
         }
 
         return (
@@ -284,14 +355,17 @@ const AllVarification = () => {
             variant="contained"
             startIcon={buttonIcon}
             size="small"
-            style={{
+            sx={{
               backgroundColor: buttonColor,
               color: "#fff",
               textTransform: "none",
-              pointerEvents: "none",
+              pointerEvents: "none", // Make it non-interactive
+              fontSize: "10px", // Smaller font for status button
+              padding: "4px 8px",
+              fontWeight: "bold",
             }}
           >
-            {status}
+            {buttonText}
           </Button>
         );
       },
@@ -304,22 +378,26 @@ const AllVarification = () => {
       headerAlign: "center",
       align: "center",
       renderCell: (params) => (
-        <Button
-          size="small"
-          variant="contained"
-          startIcon={<MdEdit size={14} />}
-          sx={{
-            backgroundColor: "#304c49",
-            textTransform: "capitalize", // Optional: keeps "Update" in normal case
-
-            "&:hover": {
-              backgroundColor: "#406c66", // Optional: darker on hover
-            },
-          }}
-          onClick={() => handleEdit(params.row.id)}
-        >
-          Update
-        </Button>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<MdEdit size={14} />}
+            sx={{
+              backgroundColor: accentColor, // Use accent color
+              color: "white",
+              textTransform: "capitalize",
+              fontSize: "10px", // Smaller font for button
+              padding: "4px 8px",
+              "&:hover": {
+                backgroundColor: "#2563EB", // Darker blue on hover
+              },
+            }}
+            onClick={() => handleEdit(params.row.id)}
+          >
+            Update
+          </Button>
+        </motion.div>
       ),
     },
     {
@@ -329,31 +407,44 @@ const AllVarification = () => {
       headerAlign: "center",
       align: "center",
       renderCell: (params) => (
-        <Button
-          size="small"
-          variant="contained"
-          startIcon={<MdDelete size={14} />}
-          sx={{
-            backgroundColor: "#c41d1d",
-            textTransform: "capitalize", // Optional: keeps "Update" in normal case
-
-            "&:hover": {
-              backgroundColor: "#406c66", // Optional: darker on hover
-            },
-          }}
-          onClick={() => {
-            setDeleteId(params.row.id);
-            setDeleteConfirmationOpen(true);
-          }}
-        >
-          Delete
-        </Button>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<MdDelete size={14} />}
+            sx={{
+              backgroundColor: "#EF4444", // Red for delete
+              color: "white",
+              textTransform: "capitalize",
+              fontSize: "10px", // Smaller font for button
+              padding: "4px 8px",
+              "&:hover": {
+                backgroundColor: "#DC2626", // Darker red on hover
+              },
+            }}
+            onClick={() => {
+              setDeleteId(params.row.id);
+              setDeleteConfirmationOpen(true);
+            }}
+          >
+            Delete
+          </Button>
+        </motion.div>
       ),
     },
   ];
 
   return (
-    <div style={{ height: 450, width: "99%", paddingTop: "20px" }}>
+    <Box
+      sx={{
+        width: "100%",
+        overflowX: "auto",
+        paddingTop: "20px",
+        backgroundColor: bgColor,
+        minHeight: "calc(100vh - 50px)",
+        padding: "20px",
+      }}
+    >
       <Box
         sx={{
           display: "flex",
@@ -361,9 +452,11 @@ const AllVarification = () => {
           justifyContent: "space-between",
           alignItems: "center",
           gap: 2,
-          marginBottom: 2,
-          marginTop: 1,
-          paddingX: { xs: 2, sm: 4 }, // Adjust padding for small and large screens
+          marginBottom: 3,
+          padding: 2,
+          backgroundColor: cardBg, // Card background for filters/button
+          borderRadius: "8px",
+          boxShadow: "0px 4px 15px rgba(0, 0, 0, 0.2)",
         }}
       >
         {/* Name Filter */}
@@ -373,16 +466,41 @@ const AllVarification = () => {
           size="small"
           value={nameFilter}
           onChange={(e) => setNameFilter(e.target.value)}
-          sx={{ width: "30%" }}
+          sx={{
+            width: { xs: "100%", sm: "30%" },
+            "& .MuiOutlinedInput-root": {
+              color: textColor,
+              "& fieldset": { borderColor: textColor },
+              "&:hover fieldset": { borderColor: accentColor },
+              "&.Mui-focused fieldset": { borderColor: accentColor },
+            },
+            "& .MuiInputLabel-root": {
+              color: textColor,
+            },
+            "& .MuiInputLabel-root.Mui-focused": {
+              color: accentColor,
+            },
+          }}
         />
 
         {/* Status Filter */}
-        <FormControl sx={{ width: "30%" }} size="small">
-          {/* <InputLabel>Status</InputLabel> */}
+        <FormControl sx={{ width: { xs: "100%", sm: "30%" } }} size="small">
+          {/* <InputLabel sx={{ color: textColor }}>Status</InputLabel> */}
           <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             displayEmpty
+            sx={{
+              color: textColor,
+              "& .MuiOutlinedInput-notchedOutline": { borderColor: textColor },
+              "&:hover .MuiOutlinedInput-notchedOutline": {
+                borderColor: accentColor,
+              },
+              "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                borderColor: accentColor,
+              },
+              "& .MuiSvgIcon-root": { color: textColor }, // Dropdown arrow color
+            }}
           >
             <MenuItem value="">All</MenuItem>
             <MenuItem value="Pending">Pending</MenuItem>
@@ -396,41 +514,69 @@ const AllVarification = () => {
         </FormControl>
 
         {/* Add Verification Button */}
-        <Button
-          variant="contained"
-          sx={{
-            backgroundColor: "#102c59",
-            marginRight: 1,
-          }}
-          onClick={() => navigate("/Admin/addVarification")}
-        >
-          Add Verification
-        </Button>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            variant="contained"
+            sx={{
+              backgroundColor: accentColor,
+              color: "white",
+              textTransform: "capitalize",
+              width: { xs: "100%", sm: "auto" },
+              "&:hover": {
+                backgroundColor: "#1C3070",
+              },
+            }}
+            onClick={() => navigate("/Admin/addVarification")}
+            endIcon={<AddCircleOutlineIcon />}
+          >
+            Add Verification
+          </Button>
+        </motion.div>
       </Box>
 
       {/* Data Grid */}
-      <Box sx={{ width: "100%", overflowX: "auto", whiteSpace: "nowrap" }}>
+      {loading ? (
+        <Box
+          sx={{
+            height: "400px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 2,
+            borderRadius: "10px",
+            backgroundColor: cardBg,
+            boxShadow: 3,
+          }}
+        >
+          <CircularProgress
+            size={40}
+            thickness={4}
+            style={{ color: accentColor }}
+          />{" "}
+          <span style={{ fontSize: "14px", color: "#333" }}>
+            Loading Verifications...
+          </span>
+        </Box>
+      ) : (
         <StyledDataGrid
           rows={filteredApplications}
           columns={columns}
           density="compact"
           pageSize={10}
           rowsPerPageOptions={[5, 10, 20]}
-          // loading={loading}
           components={{
             Toolbar: () => <CustomToolbar />,
           }}
-          rowHeight={null} // Let row height be dynamic
+          rowHeight={null}
           getRowHeight={() => "auto"}
           sx={{
-            height: "440px",
+            height: "405px",
             minWidth: "300px",
-            boxShadow: 5,
-            borderRadius: "10px",
-            overflow: "hidden", // Hide internal scrollbars
+            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.2)",
           }}
         />
-      </Box>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <ConfirmationDialog
@@ -443,7 +589,7 @@ const AllVarification = () => {
         title="Confirm Delete"
         message="Are you sure you want to delete this Verification?"
       />
-    </div>
+    </Box>
   );
 };
 

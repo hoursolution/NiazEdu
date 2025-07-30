@@ -18,23 +18,73 @@ import {
   Tooltip,
   IconButton,
   Grid,
+  useMediaQuery,
 } from "@mui/material";
 import axios from "axios";
 import { GridToolbar } from "@mui/x-data-grid";
 import styles from "./StudentProjectionSheetTable.module.css";
 import FileUploadDialog from "./FileUploadDialog";
-import { styled } from "@mui/material/styles";
+import { styled, useTheme } from "@mui/material/styles";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import { LiaMoneyCheckAltSolid } from "react-icons/lia";
+import { RiFundsBoxFill, RiFundsBoxLine } from "react-icons/ri";
+import { MdAttachMoney, MdPendingActions } from "react-icons/md";
 import DescriptionIcon from "@mui/icons-material/Description"; // Challan
 import AssessmentIcon from "@mui/icons-material/Assessment"; // Result
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong"; // Receipt
 import FolderIcon from "@mui/icons-material/Folder"; // Other Documents
+
+// Custom styled DataGrid component
+const StyledDataGrid = styled(DataGrid)({
+  "& .MuiDataGrid-columnHeaders": {
+    backgroundColor: "#263238",
+    color: "white",
+    fontSize: "13px",
+    textTransform: "capitalize",
+  },
+  "& .MuiDataGrid-columnHeader": {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    borderLeft: "1px solid white",
+    textAlign: "center",
+    whiteSpace: "normal",
+  },
+  "& .MuiDataGrid-columnHeaderTitle": {
+    whiteSpace: "normal",
+    lineHeight: 1.2,
+    width: "100%",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    textAlign: "center",
+  },
+  "& .MuiDataGrid-cell": {
+    borderLeft: "1px solid #aaa",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    textAlign: "center",
+    whiteSpace: "normal",
+    wordWrap: "break-word",
+    lineHeight: 1.4,
+    padding: "6px",
+    fontSize: "12px",
+  },
+
+  "& .MuiDataGrid-row": {
+    "&:hover": {
+      backgroundColor: "rgba(0, 128, 0, 0.02)",
+    },
+  },
+});
 
 const StudentProjectionSheetTable = (studentId) => {
   const [studentDetails, setStudentDetails] = useState(null);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [studentData, setStudentData] = useState(null);
+  const [latestApplication, SetLatestApplication] = useState(null);
 
   const [editRow, setEditRow] = useState(null);
   const [originalRow, setOriginalRow] = useState(null); // Store original row data
@@ -51,22 +101,26 @@ const StudentProjectionSheetTable = (studentId) => {
     totalPaid: 0,
     remainingBalance: 0,
   });
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   // const BASE_URL = "http://127.0.0.1:8000";
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
 
   // Function to fetch projections and update table data
   const fetchStudentProjections = async () => {
     try {
       const token = localStorage.getItem("token");
       const storedStudentId = localStorage.getItem("studentId");
+
       if (!token || !storedStudentId) {
-        console.error("Token not available or missing studentId.");
+        console.error("Missing token or studentId.");
         return;
       }
-      // setStudentId(storedStudentId);
 
-      const response = await fetch(
-        `${BASE_URL}/api/students/${storedStudentId}/projections/`,
+      // Step 1: Fetch student details (with applications)
+      const studentRes = await fetch(
+        `${BASE_URL}/api/studentDetails/${storedStudentId}/`,
         {
           headers: {
             Authorization: `Token ${token}`,
@@ -74,77 +128,65 @@ const StudentProjectionSheetTable = (studentId) => {
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch student projections.");
+      if (!studentRes.ok) {
+        throw new Error("Failed to fetch student details.");
       }
 
-      const data = await response.json();
-      // Sort projections by semester_number in ascending order
-      const sortedProjections = (data.projection || []).sort((a, b) => {
-        // Primary sort: By semester_number
-        if (a.semester_number !== b.semester_number) {
-          return a.semester_number - b.semester_number;
-        }
+      const studentData = await studentRes.json();
 
-        // Secondary sort: By Projection_ending_date (parse to Date for comparison)
-        const dateA = new Date(a.Projection_ending_date || "9999-12-31"); // Default far future date for missing values
-        const dateB = new Date(b.Projection_ending_date || "9999-12-31");
-        return dateA - dateB;
-      });
-      // Check if the challan due date is past, and if so, update the status to "Overdue"
-      // Check if the challan due date is past and receipt is not available, update status to "Overdue"
+      if (!studentData.applications || studentData.applications.length === 0) {
+        console.warn("No applications found for student.");
+        return;
+      }
+
+      // Step 2: Get the latest application
+      const latestApplication =
+        studentData.applications[studentData.applications.length - 1];
+
+      SetLatestApplication(latestApplication);
+
+      // Step 4: Sort and enhance projection data
+      const sortedProjections = (latestApplication.projections || []).sort(
+        (a, b) => {
+          if (a.semester_number !== b.semester_number) {
+            return a.semester_number - b.semester_number;
+          }
+          const dateA = new Date(a.Projection_ending_date || "9999-12-31");
+          const dateB = new Date(b.Projection_ending_date || "9999-12-31");
+          return dateA - dateB;
+        }
+      );
+
       const updatedProjections = sortedProjections.map((item) => {
-        const challanDate = item.challan_date
-          ? new Date(item.challan_date)
-          : null;
-        const challanDueDate = item.challan_due_date
+        const currentDate = new Date();
+        const due = item.challan_due_date
           ? new Date(item.challan_due_date)
           : null;
-        const challanPaymentDate = item.challan_payment_date
+        const paid = item.challan_payment_date
           ? new Date(item.challan_payment_date)
           : null;
-        const currentDate = new Date();
 
-        if (challanPaymentDate) {
-          // If payment date is available, status is "Paid"
-          item.status = "Paid";
-        } else if (challanDueDate && challanDueDate < currentDate) {
-          // If the due date is in the past and no payment date, status is "Overdue"
-          item.status = "Overdue";
-        } else if (challanDueDate && challanDueDate >= currentDate) {
-          // If the due date is in the future and no payment date, status is "Due"
-          item.status = "Due";
-        }
-        // else if (challanDate && !challanDueDate) {
-        // If a challan is uploaded but no due date is specified
-        // item.status = "Challan Uploaded";
-        // }
-        else {
-          // If no dates are present, set a default status
-          item.status = item.status || "NYD";
-        }
+        if (paid) item.status = "Paid";
+        else if (due && due < currentDate) item.status = "Overdue";
+        else if (due && due >= currentDate) item.status = "Due";
+        else item.status = item.status || "NYD";
 
         return item;
       });
-      // Calculate total amount and total paid
-      let totalAmount = 0;
-      let totalPaid = 0;
 
-      sortedProjections.forEach((item) => {
-        const itemTotal = parseFloat(item.total_amount || 0);
-
-        totalAmount += itemTotal; // Sum up total amounts
-        if (item.status === "Paid") {
-          totalPaid += itemTotal; // Sum up amounts with status "Paid"
-        }
+      // Step 5: Calculate totals
+      let totalAmount = 0,
+        totalPaid = 0;
+      updatedProjections.forEach((item) => {
+        const amount = parseFloat(item.total_amount || 0);
+        totalAmount += amount;
+        if (item.status === "Paid") totalPaid += amount;
       });
 
       const remainingBalance = totalAmount - totalPaid;
-      // console.log(totalAmount);
-      // console.log(totalPaid);
-      // console.log(remainingBalance);
 
-      setStudentData(data);
+      // Step 6: Set state
+      setStudentData(studentData); // Full student data
       setProjections(updatedProjections);
       setTotals({
         totalAmount: totalAmount.toFixed(2),
@@ -153,12 +195,12 @@ const StudentProjectionSheetTable = (studentId) => {
       });
       setRows(
         updatedProjections.map((item, index) => ({
-          id: index + 1, // Ensure a stable ID
+          id: index + 1,
           ...item,
         }))
       );
     } catch (error) {
-      console.error("Error fetching student projections:", error);
+      console.error("Error fetching projections from application:", error);
     } finally {
       setLoading(false);
     }
@@ -321,34 +363,76 @@ const StudentProjectionSheetTable = (studentId) => {
   };
 
   const columns = [
-    { field: "semester_number", headerName: "Semester", width: 80 },
     {
-      field: "education_fee_contribution",
-      headerName: "Education Fee Contribution",
-      width: 180,
-      valueFormatter: (params) => parseFloat(params.value || 0).toFixed(0), // Ensures two decimal places
+      field: "sno",
+      headerName: "S.No",
+      headerAlign: "center",
+      align: "center",
+      width: 40,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => {
+        return params.api.getRowIndexRelativeToVisibleRows(params.id) + 1;
+      },
     },
     {
-      field: "other_cost_contribution",
-      headerName: "Other Cost Contribution",
-      width: 180,
-      valueFormatter: (params) => parseFloat(params.value || 0).toFixed(0), // Ensures two decimal places
+      field: "semester_number",
+      headerName: "Semester",
+      flex: 1,
+      minWidth: 75,
+      headerAlign: "center",
+      align: "center",
     },
-    {
-      field: "admission_fee_contribution",
-      headerName: "Admission Fee Contribution",
-      width: 200,
-      // valueFormatter: (params) => parseFloat(params.value || 0).toFixed(2), // Ensures two decimal places
-    },
+    // {
+    //   field: "education_fee_contribution",
+    //   headerName: "Education Fee Contribution",
+    //   width: 180,
+    //   valueFormatter: (params) => parseFloat(params.value || 0).toFixed(0), // Ensures two decimal places
+    // },
+    // {
+    //   field: "other_cost_contribution",
+    //   headerName: "Other Cost Contribution",
+    //   width: 180,
+    //   valueFormatter: (params) => parseFloat(params.value || 0).toFixed(0), // Ensures two decimal places
+    // },
+    // {
+    //   field: "admission_fee_contribution",
+    //   headerName: "Admission Fee Contribution",
+    //   width: 200,
+    //   // valueFormatter: (params) => parseFloat(params.value || 0).toFixed(2), // Ensures two decimal places
+    // },
     {
       field: "total_amount",
-      headerName: "Total Amount",
+      headerName: "Total Amount Contribution",
       width: 140,
       valueFormatter: (params) => parseFloat(params.value || 0).toFixed(0), // Ensures two decimal places
     },
 
     ,
-    { field: "percentage", headerName: "Percentage (%)", width: 400 },
+    {
+      field: "percentage",
+      headerName: "Percentage(%)",
+      flex: 1,
+      minWidth: 105,
+      headerAlign: "center",
+      align: "center",
+      valueGetter: (params) => {
+        const raw = params.row.percentage;
+        if (!raw) return "N/A";
+
+        const cleaned = raw.replace(/Sponsor \d+:\s*/g, "").split(",");
+        const rounded = cleaned.map((p) => Math.round(parseFloat(p)));
+
+        if (rounded.length === 1 || (rounded[1] && rounded[1] > 0)) {
+          return rounded
+            .filter((v) => v > 0)
+            .map((v) => `${v}%`)
+            .join(", ");
+        } else {
+          return `${rounded[0]}%`;
+        }
+      },
+    },
     {
       field: "Projection_ending_date",
       headerName: "Estimated Date Of Payment",
@@ -430,50 +514,50 @@ const StudentProjectionSheetTable = (studentId) => {
     },
     { field: "status", headerName: "Status", width: 150 },
 
-    {
-      field: "result",
-      headerName: "Result",
-      width: 80,
-      renderCell: (params) =>
-        params.row.result ? (
-          <Tooltip title="View Result">
-            <IconButton
-              color="warning"
-              onClick={() => handleViewDocument(params.row, "result")}
-            >
-              <AssessmentIcon />
-            </IconButton>
-          </Tooltip>
-        ) : (
-          <Tooltip title="Not Uploaded">
-            <Typography variant="body2" color="error">
-              <ErrorOutlineIcon />
-            </Typography>
-          </Tooltip>
-        ),
-    },
-    {
-      field: "other_documents",
-      headerName: "Other Documents",
-      width: 130,
-      renderCell: (params) =>
-        params.row.other_documents ? (
-          <Tooltip title="View Other Documents">
-            <IconButton
-              color="secondary"
-              onClick={() => handleViewDocument(params.row, "other_documents")}
-            >
-              <FolderIcon />
-            </IconButton>
-          </Tooltip>
-        ) : (
-          <Tooltip title="Not Uploaded">
-            <Typography variant="body2" color="error">
-              <ErrorOutlineIcon />
-            </Typography>
-          </Tooltip>
-        ),
-    },
+    // {
+    //   field: "result",
+    //   headerName: "Result",
+    //   width: 80,
+    //   renderCell: (params) =>
+    //     params.row.result ? (
+    //       <Tooltip title="View Result">
+    //         <IconButton
+    //           color="warning"
+    //           onClick={() => handleViewDocument(params.row, "result")}
+    //         >
+    //           <AssessmentIcon />
+    //         </IconButton>
+    //       </Tooltip>
+    //     ) : (
+    //       <Tooltip title="Not Uploaded">
+    //         <Typography variant="body2" color="error">
+    //           <ErrorOutlineIcon />
+    //         </Typography>
+    //       </Tooltip>
+    //     ),
+    // },
+    // {
+    //   field: "other_documents",
+    //   headerName: "Other Documents",
+    //   width: 130,
+    //   renderCell: (params) =>
+    //     params.row.other_documents ? (
+    //       <Tooltip title="View Other Documents">
+    //         <IconButton
+    //           color="secondary"
+    //           onClick={() => handleViewDocument(params.row, "other_documents")}
+    //         >
+    //           <FolderIcon />
+    //         </IconButton>
+    //       </Tooltip>
+    //     ) : (
+    //       <Tooltip title="Not Uploaded">
+    //         <Typography variant="body2" color="error">
+    //           <ErrorOutlineIcon />
+    //         </Typography>
+    //       </Tooltip>
+    //     ),
+    // },
 
     {
       field: "actions",
@@ -491,224 +575,207 @@ const StudentProjectionSheetTable = (studentId) => {
       ),
     },
   ];
+  // style cards
+  const boxStyle = {
+    flex: "1 1 240px",
+    minWidth: "220px",
+    maxWidth: "100%",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    background: "linear-gradient(135deg, #e0f7fa, #b2ebf2)",
+    borderRadius: "12px",
+    padding: "5px",
+    textAlign: "center",
+    boxShadow: "0px 6px 12px rgba(0, 0, 0, 0.1)",
+    transition: "transform 0.3s, box-shadow 0.3s",
+    color: "#fff",
 
-  return (
-    <Box sx={{ mt: 0, p: 1 }}>
-      <Typography
-        variant="h5"
-        align="center"
-        sx={{ color: "#333", fontWeight: "bold" }}
-      >
-        Projection Sheet
+    "&:hover": {
+      transform: "translateY(-4px)",
+      boxShadow: "0px 8px 18px rgba(0, 0, 0, 0.15)",
+    },
+  };
+
+  const renderBox = (icon, title, value, onClick, customStyle = {}) => (
+    <Box
+      sx={{ ...boxStyle, ...customStyle, height: "100px" }}
+      onClick={onClick}
+    >
+      <Box sx={{ mb: 1 }}>{icon}</Box>
+      <Typography sx={{ fontSize: "12px", color: "#000", fontWeight: 600 }}>
+        {title}
       </Typography>
+      <Typography
+        variant="h6"
+        sx={{ fontSize: "14px", color: "#000", fontWeight: "bold", mt: 0.5 }}
+      >
+        {value}
+      </Typography>
+    </Box>
+  );
+  return (
+    <Box sx={{ width: "100%", maxHeight: "100%", px: { xs: 3, sm: 1 } }}>
       {studentId && (
-        <div>
-          <Paper
+        <Box
+          sx={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: isMobile ? "center" : "flex-start",
+            gap: 2,
+            padding: "5px",
+            marginBottom: "20px",
+          }}
+        >
+          {/* Student info*/}
+          <Box
             sx={{
-              marginTop: 0.5,
-              width: "99%",
-              borderRadius: "20px",
+              ...boxStyle,
+
+              background: "linear-gradient(135deg, #263238, #37474f)",
+              alignItems: "center",
+              flexDirection: "row",
+              gap: 1.6,
             }}
-            elevation={6}
           >
+            <StyledBadge
+              overlap="circular"
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              variant="dot"
+            >
+              <Avatar
+                alt="Profile pic"
+                src={latestApplication?.profile_picture}
+                sx={{ width: 60, height: 60, marginLeft: "8px" }}
+              />
+            </StyledBadge>
             <Box
               sx={{
+                flex: { xs: "100%", sm: 1.5 },
+                minWidth: 200,
                 display: "flex",
-                flexWrap: "wrap", // Allow items to wrap on smaller screens
-                alignItems: "center",
-                background:
-                  "linear-gradient(0deg, rgba(31,184,195,0) 0%, rgba(57,104,120,0.6112570028011204) 100%)",
-                borderRadius: "20px",
-                padding: "20px",
-                gap: 2, // Adds spacing between items
+                gap: 0.4,
+                flexDirection: "column",
               }}
             >
-              {/* Avatar Section */}
-              <Box
+              {/* name */}
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: "bold", wordBreak: "break-word" }}
+              >
+                {latestApplication?.name
+                  ? latestApplication.name.toUpperCase()
+                  : ""}{" "}
+                {latestApplication?.status && (
+                  <Typography
+                    component="span"
+                    sx={{
+                      fontSize: "0.6rem",
+                      color:
+                        latestApplication.status.toLowerCase() === "accepted"
+                          ? "#44b700"
+                          : "red",
+                    }}
+                  >
+                    ({latestApplication.status})
+                  </Typography>
+                )}
+              </Typography>
+
+              {/* details */}
+              <Typography
+                variant="body1"
                 sx={{
-                  flex: { xs: "100%", sm: 0.5 },
-                  minWidth: 100,
-                  display: "flex",
-                  justifyContent: "center",
+                  fontSize: "8px",
+                  whiteSpace: "normal",
+                  wordBreak: "break-word",
                 }}
               >
-                <StyledBadge
-                  overlap="circular"
-                  anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                  variant="dot"
-                >
-                  <Avatar
-                    alt="Profile pic"
-                    src={studentData?.applications?.[0].profile_picture}
-                    sx={{ width: 56, height: 56 }}
-                  />
-                </StyledBadge>
-              </Box>
+                {latestApplication?.mobile_no || "N/A"} |{" "}
+                {latestApplication?.email || "N/A"} |{" "}
+                {latestApplication?.city || "N/A"}
+              </Typography>
 
-              {/* Name and Program Section */}
-              <Box sx={{ flex: { xs: "100%", sm: 1.5 }, minWidth: 200 }}>
-                <Typography
-                  variant="h6"
-                  sx={{ fontWeight: "bold", wordBreak: "break-word" }}
-                >
-                  {studentData?.applications?.[0].name
-                    ? studentData.applications[0].name.toUpperCase()
-                    : ""}
-                </Typography>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    fontSize: "10px",
-                    whiteSpace: "normal",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  {studentData?.applications?.[0].program_interested_in?.toUpperCase()}{" "}
-                  | STUDENT ID {studentData?.applications?.[0].id}
-                </Typography>
-              </Box>
-
-              {/* Gender, DOB, Address */}
-              <Box sx={{ flex: { xs: "100%", sm: 2 }, minWidth: 200 }}>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    fontWeight: "bold",
-                    fontSize: "12px",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  GENDER: {studentData?.applications?.[0].gender.toUpperCase()}
-                </Typography>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    fontWeight: "bold",
-                    fontSize: "12px",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  DOB: {studentData?.applications?.[0].date_of_birth}
-                </Typography>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    fontWeight: "bold",
-                    fontSize: "12px",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  ADDRESS:{" "}
-                  {studentData?.applications?.[0].address.toUpperCase()}
-                </Typography>
-              </Box>
-
-              {/* Place of Birth, Residency, Institute */}
-              <Box sx={{ flex: { xs: "100%", sm: 2 }, minWidth: 200 }}>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    fontWeight: "bold",
-                    fontSize: "12px",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  PLACE OF BIRTH:{" "}
-                  {studentData?.applications?.[0].village.toUpperCase()}
-                </Typography>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    fontWeight: "bold",
-                    fontSize: "12px",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  PLACE OF RESIDENCY:{" "}
-                  {studentData?.applications?.[0].country.toUpperCase()}
-                </Typography>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    fontWeight: "bold",
-                    fontSize: "12px",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  INSTITUTE:{" "}
-                  {studentData?.applications?.[0].institution_interested_in.toUpperCase()}
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
-        </div>
-      )}
-      <Grid container spacing={2}>
-        {/* Totals */}
-        <Grid item xs={12}>
-          <Grid container spacing={2}>
-            <Grid item xs={3}>
+              {/* collage */}
               <Typography
-                variant="h5"
-                // align="center"
-                sx={{ color: "#333", fontWeight: "bold" }}
+                variant="body1"
+                sx={{
+                  // fontWeight: "bold",
+                  fontSize: "10px",
+                  wordBreak: "break-word",
+                }}
               >
-                Projection Sheet
+                {/* Collage:{" "} */}
+                {latestApplication?.institution_interested_in}
               </Typography>
-            </Grid>
-            <Grid item xs={3}>
-              <Typography sx={{ color: "#333", fontWeight: "bold" }}>
-                Total Amount
+
+              {/* proram */}
+              <Typography
+                variant="body1"
+                sx={{
+                  fontSize: "10px",
+                  whiteSpace: "normal",
+                  wordBreak: "break-word",
+                }}
+              >
+                {/* Program:{" "} */}
+                {latestApplication?.program_interested_in?.toUpperCase()}{" "}
               </Typography>
-              <Typography sx={{ fontWeight: "bold" }} color="primary">
-                {totals.totalAmount}
-              </Typography>
-            </Grid>
-            <Grid item xs={3}>
-              <Typography sx={{ color: "#333", fontWeight: "bold" }}>
-                Received Upto Now
-              </Typography>
+            </Box>
+          </Box>
+
+          {/* Metrics Boxes */}
+          <Box>
+            {renderBox(
+              <LiaMoneyCheckAltSolid size={36} color="green" />,
+              <span className="font-bold text-sm ">
+                Total Amount Sponsored (PKR)
+              </span>,
+              <Typography sx={{ fontWeight: "bold" }} color="green">
+                {parseFloat(totals.totalAmount).toLocaleString()}
+              </Typography>,
+              () => navigate("#"),
+              {
+                background: "linear-gradient(135deg, #e0f7fa, #b2ebf2)",
+              }
+            )}
+          </Box>
+
+          <Box>
+            {renderBox(
+              <RiFundsBoxLine size={34} color="#2e7d32" />,
+
+              <span className="font-bold text-sm ">
+                Total Donated So Far (PKR)
+              </span>,
               <Typography sx={{ fontWeight: "bold" }} color="success.main">
-                {totals.totalPaid}
-              </Typography>
-            </Grid>
-            <Grid item xs={3}>
-              <Typography sx={{ color: "#333", fontWeight: "bold" }}>
-                Remaining Amount
-              </Typography>
-              <Typography sx={{ fontWeight: "bold" }} color="error.main">
-                {totals.remainingBalance}
-              </Typography>
-            </Grid>
-          </Grid>
-        </Grid>
-      </Grid>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-around",
-          backgroundColor: "#f5f5f5",
-          p: 0,
-          mb: 1,
-          borderRadius: "10px",
-          boxShadow: 2,
-        }}
-      >
-        {/* <Typography variant="body1" sx={{ fontSize: "12px" }}>
-          Education Fee Considered: {educationFeeConsidered.toLocaleString()}{" "}
-        </Typography>
-        <Typography variant="body1" sx={{ fontSize: "12px" }}>
-          Education Fee (Based on {educationFeePercentage}%):{" "}
-          {calculatedEducationFee.toLocaleString()}
-        </Typography>
-        <Typography variant="body1" sx={{ fontSize: "12px" }}>
-          Other Cost Considered: {otherCostConsidered.toLocaleString()}{" "}
-        </Typography>
-        <Typography variant="body1" sx={{ fontSize: "12px" }}>
-          Other Cost (Based on {otherCostPercentage}%):{" "}
-          {calculatedOtherCost.toLocaleString()}
-        </Typography> */}
-      </Box>
+                {parseFloat(totals.totalPaid).toLocaleString()}
+              </Typography>,
+              () => navigate("#"),
+              {
+                background: "linear-gradient(135deg, #e8f5e9, #c8e6c9)", // light green
+              }
+            )}
+          </Box>
+
+          <Box>
+            {renderBox(
+              <MdPendingActions size={34} color="#2e7d32" />,
+
+              <span className="font-bold text-sM ">
+                Remaining Sponsorship (PKR)
+              </span>,
+              <Typography sx={{ fontWeight: "bold" }} color="success.main">
+                {parseFloat(totals.remainingBalance).toLocaleString()}
+              </Typography>,
+              () => navigate("#"),
+              {
+                background: "linear-gradient(135deg, #F1B9AA, #EB6959)", // light orange
+              }
+            )}
+          </Box>
+        </Box>
+      )}
 
       <Box sx={{ height: 400, width: "100%" }}>
         {loading ? (
@@ -723,7 +790,7 @@ const StudentProjectionSheetTable = (studentId) => {
             <CircularProgress color="primary" />
           </Box>
         ) : (
-          <DataGrid
+          <StyledDataGrid
             rows={rows}
             columns={columns}
             density="compact"
@@ -731,34 +798,6 @@ const StudentProjectionSheetTable = (studentId) => {
             rowsPerPageOptions={[5, 10, 20]}
             components={{
               Toolbar: GridToolbar,
-            }}
-            sx={{
-              boxShadow: 5,
-              borderRadius: "10px",
-              "& .MuiDataGrid-columnHeaders": {
-                background:
-                  "linear-gradient(90deg, rgba(57,104,120,0.6) 0%, rgba(31,184,195,1) 100%)",
-                color: "#fff",
-                fontWeight: "bold",
-                textTransform: "uppercase",
-              },
-              "& .MuiDataGrid-row": {
-                backgroundColor: "#f5fafd",
-                "&:nth-of-type(even)": { backgroundColor: "#e8f4f8" },
-              },
-              "& .MuiDataGrid-row:hover": {
-                backgroundColor: "#d9f0f5",
-                transform: "scale(1.01)",
-                transition: "all 0.2s ease-in-out",
-              },
-              "& .MuiDataGrid-cell": {
-                borderBottom: "1px solid #ddd",
-              },
-              "& .MuiDataGrid-footerContainer": {
-                backgroundColor: "#e3f2fd",
-                color: "#333",
-                fontWeight: "bold",
-              },
             }}
           />
         )}

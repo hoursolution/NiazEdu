@@ -4,7 +4,7 @@ import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import { Box, Paper, Typography, Grid, Avatar } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import logo from "../../assets/Pnglogo.png";
+import logo from "../../assets/NAIZ_LOGO.png";
 import { AccountCircle } from "@mui/icons-material";
 import LockIcon from "@mui/icons-material/Lock";
 import InputAdornment from "@mui/material/InputAdornment";
@@ -22,6 +22,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Drawer from "@mui/material/Drawer";
 import MenuIcon from "@mui/icons-material/Menu";
 import ToggleColorMode from "../Home/ToggleColorMode";
+import bg from "../../assets/loginbg.jpg";
 
 const LoginForm = () => {
   const [username, setUsername] = useState("");
@@ -30,7 +31,8 @@ const LoginForm = () => {
   const [open, setOpen] = React.useState(false);
   const [error, setError] = useState("");
   // const BASE_URL = "http://127.0.0.1:8000";
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
 
   const navigate = useNavigate();
   const handleLoginClick = () => {
@@ -113,26 +115,27 @@ const LoginForm = () => {
             <Box
               sx={{
                 display: { xs: "none", md: "flex" },
-                gap: 2,
+                gap: 4,
                 alignItems: "center",
               }}
             >
               {/* <ToggleColorMode mode={mode} toggleColorMode={toggleColorMode} /> */}
               <Button
                 color="primary"
-                variant="text"
+                variant="contained"
                 size="small"
                 component="a"
                 onClick={handleLoginClick}
                 target="_blank"
                 style={{
                   borderRadius: "5px",
-                  backgroundColor: "#fff",
-                  color: "#148581",
+                  backgroundColor: "#066da2",
+                  color: "#fff",
                   fontWeight: 700,
+                  marginTop: "2px",
                 }}
               >
-                Log In
+                LogIn
               </Button>
               <Button
                 color="primary"
@@ -143,7 +146,7 @@ const LoginForm = () => {
                 target="_blank"
                 style={{
                   borderRadius: "5px",
-                  backgroundColor: "#148581",
+                  backgroundColor: "#066da2",
                   color: "#fff",
                   fontWeight: 700,
                 }}
@@ -251,29 +254,29 @@ const LoginForm = () => {
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                paddingX: "60px",
-                gap: 4,
+                width: "110%",
+                backgroundImage: `url(${bg})`,
+                backgroundSize: "cover",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center",
+                minHeight: "100%", // or any height you want
               }}
             >
-              <Typography
+              <Box
                 sx={{
-                  fontSize: "18px",
-                  fontWeight: 600,
-                  textAlign: "left",
-                  color: "#14475a",
-                  lineHeight: 1.4,
+                  backgroundColor: "#e2e8f0",
+                  borderRadius: "100%",
+                  padding: "50px",
                 }}
               >
-                Welcome to Zeen Education Sponsorship Network, where your
-                journey towards knowledge and opportunity begins!
-              </Typography>
-              <img src={logo} alt="logo of sitemark" />
+                <img src={logo} alt="logo of sitemark" width={120} />
+              </Box>
             </Box>
 
             {/* form */}
             <Box
               sx={{
-                backgroundColor: "#148581",
+                backgroundColor: "#e2e8f0",
                 height: "100%",
                 width: "100%",
                 borderTopRightRadius: "10px",
@@ -294,7 +297,7 @@ const LoginForm = () => {
                       variant="h7"
                       className="pt-3 pb-3 text-white font-bold "
                       sx={{
-                        backgroundColor: "#14475a",
+                        backgroundColor: "#056da1",
                         marginBottom: 3,
                         borderTopLeftRadius: "5px",
                         borderTopRightRadius: "5px",
@@ -305,38 +308,39 @@ const LoginForm = () => {
                     </Typography>
 
                     <TextField
-                      label="Email"
+                      label="B-Form/CNIC"
                       variant="outlined"
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
-                            <AccountCircle sx={{ color: "#fff" }} />
+                            <AccountCircle sx={{ color: "#066da2" }} />
                           </InputAdornment>
                         ),
                         sx: {
-                          color: "#fff", // text color
+                          color: "#000", // text color
                           "& .MuiOutlinedInput-notchedOutline": {
-                            borderColor: "#afafaf", // outline color
+                            borderColor: "#aaa", // outline color
                           },
                           "&:hover .MuiOutlinedInput-notchedOutline": {
-                            borderColor: "#fff",
+                            borderColor: "#aaa",
                           },
                           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                            borderColor: "#fff",
+                            borderColor: "#aaa",
                           },
+                          backgroundColor: "white",
                         },
                       }}
                       InputLabelProps={{
                         sx: {
-                          color: "#fff", // label color
+                          color: "#aaa", // label color
                           "&.Mui-focused": {
-                            color: "#fff",
+                            color: "#aaa",
                           },
                         },
                       }}
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Email"
+                      placeholder="B-Form/CNIC"
                       style={{ marginBottom: "16px" }}
                     />
 
@@ -348,27 +352,28 @@ const LoginForm = () => {
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
-                            <LockIcon sx={{ color: "#fff" }} />
+                            <LockIcon sx={{ color: "#066da2" }} />
                           </InputAdornment>
                         ),
                         sx: {
-                          color: "#fff",
+                          color: "#000", // text color
                           "& .MuiOutlinedInput-notchedOutline": {
-                            borderColor: "#afafaf",
+                            borderColor: "#aaa", // outline color
                           },
                           "&:hover .MuiOutlinedInput-notchedOutline": {
-                            borderColor: "#fff",
+                            borderColor: "#aaa",
                           },
                           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                            borderColor: "#fff",
+                            borderColor: "#aaa",
                           },
+                          backgroundColor: "white",
                         },
                       }}
                       InputLabelProps={{
                         sx: {
-                          color: "#fff",
+                          color: "#aaa", // label color
                           "&.Mui-focused": {
-                            color: "#fff",
+                            color: "#aaa",
                           },
                         },
                       }}
@@ -387,8 +392,8 @@ const LoginForm = () => {
                       }
                       label="Show Password"
                       style={{
-                        fontSize: "8px",
-                        color: "#afafaf",
+                        fontSize: "6px",
+                        color: "#000",
                       }}
                     />
 
@@ -410,7 +415,7 @@ const LoginForm = () => {
                         {showPasswordReset && <PasswordResetRequest />}
                       </span>
                       <span
-                        className="text-sm ml-20 cursor-pointer  text-white underline"
+                        className="text-sm ml-20 cursor-pointer  text-gray-600 underline"
                         onClick={handleRegisterClick}
                       >
                         Register now
@@ -422,14 +427,14 @@ const LoginForm = () => {
                       onClick={handleLogin}
                       sx={{
                         borderRadius: "5px",
-                        backgroundColor: "#fff",
-                        color: "#148581",
+                        backgroundColor: "#066da2",
+                        color: "#fff",
                         fontWeight: 700,
                         width: "100px",
                         marginLeft: "100px",
                         marginTop: "14px",
                         ":hover": {
-                          backgroundColor: "#148581",
+                          backgroundColor: "#066da2",
                           color: "#fafafa",
                         },
                       }}

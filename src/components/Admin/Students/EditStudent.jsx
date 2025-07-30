@@ -19,7 +19,8 @@ const EditStudentForm = () => {
   const navigate = useNavigate();
   const { studentId } = useParams();
   // const BASE_URL = "http://127.0.0.1:8000";
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
   const [formData, setFormData] = useState({
     student_name: "",
     father_name: "",
@@ -89,9 +90,18 @@ const EditStudentForm = () => {
         display: "flex",
         justifyContent: "center",
         marginTop: 20,
+        minHeight: "100vh",
       }}
     >
-      <Paper style={{ padding: 20, maxWidth: 400 }}>
+      <Paper
+        sx={{
+          flex: 1,
+          overflowY: "auto",
+          paddingX: 3,
+          paddingY: 2,
+          maxHeight: "calc(100vh - 150px)", // Adjust height to allow room for buttons
+        }}
+      >
         <Typography variant="h4" align="center" gutterBottom>
           EDIT STUDENT
         </Typography>
@@ -124,7 +134,6 @@ const EditStudentForm = () => {
                 onChange={handleChange}
                 fullWidth
                 required
-                helperText="will be consider as student username"
               />
             </Grid>
             <Grid item xs={12}>
@@ -156,10 +165,11 @@ const EditStudentForm = () => {
               <TextField
                 select
                 name="user"
-                label="User"
+                label="User CNIC/B-Form"
                 value={formData.user}
                 onChange={handleChange}
                 fullWidth
+                helperText="will be consider as student username"
                 InputProps={{
                   readOnly: true,
                 }}

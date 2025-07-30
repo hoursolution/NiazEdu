@@ -19,35 +19,61 @@ import { useNavigate } from "react-router-dom";
 import ConfirmationDialog from "../Applications/ConfirmationDialog";
 import MentorCreation from "../Profiles/MentorCreation";
 import EditSelectMentorForm from "./EditSelectMentor";
-import { MdDelete, MdEdit } from "react-icons/md";
+import CircularProgress from "@mui/material/CircularProgress";
 
-// Custom GridToolbar with the "Projection" button
+// --- Glass Lavender + Midnight Mode ---
+const primaryColor = "#312E81"; // Indigo-900 for nav
+const secondaryColor = "#A78BFA"; // Light violet
+const accentColor = "#8B5CF6"; // Purple-500 for buttons
+const bgColor = "rgba(255, 255, 255, 0.5)"; // Translucent base
+const cardBg = "rgba(255, 255, 255, 0.65)";
+const textColor = "#1E1B4B"; // Deep indigo for text
+const headerBg = "rgba(243, 232, 255, 0.25)";
+
+// Custom GridToolbar
 const CustomToolbar = () => {
   return (
-    <GridToolbarContainer>
-      <GridToolbarColumnsButton />
-      <GridToolbarFilterButton />
-      <GridToolbarDensitySelector />
-      {/* <GridToolbarExport /> */}
+    <GridToolbarContainer
+      sx={{
+        backgroundColor: cardBg, // Match table background
+        borderBottom: `1px solid ${headerBg}`,
+        padding: "8px",
+        borderRadius: "8px 8px 0 0", // Match table border radius
+      }}
+    >
+      <GridToolbarColumnsButton sx={{ color: textColor }} />
+      <GridToolbarDensitySelector sx={{ color: textColor }} />
+      {/* GridToolbarFilterButton is not used in the original CustomToolbar, but can be added if needed */}
+      {/* <GridToolbarFilterButton sx={{ color: textColor }} /> */}
     </GridToolbarContainer>
   );
 };
 
 // Custom styled DataGrid component
 const StyledDataGrid = styled(DataGrid)({
+  border: `1px solid ${cardBg}`, // Subtle border
+  borderRadius: "8px", // Rounded corners for the whole table
+  overflow: "hidden", // Ensures rounded corners are visible
+
   "& .MuiDataGrid-columnHeaders": {
-    backgroundColor: "#263238",
-    color: "white",
+    backgroundColor: headerBg, // Darker header background
+    color: textColor, // White text for headers
     fontSize: "13px",
-    textTransform: "capitalize",
+    textTransform: "uppercase", // More modern look
+    fontWeight: "bold",
+    borderBottom: `1px solid ${accentColor}`, // Accent line below headers
   },
   "& .MuiDataGrid-columnHeader": {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    borderLeft: "1px solid white",
+    borderLeft: `1px solid #aaa`, // Subtle border between headers
     textAlign: "center",
     whiteSpace: "normal",
+    "&:first-of-type": {
+      // Remove left border for the first header
+      borderLeft: "none",
+    },
   },
   "& .MuiDataGrid-columnHeaderTitle": {
     whiteSpace: "normal",
@@ -59,7 +85,7 @@ const StyledDataGrid = styled(DataGrid)({
     textAlign: "center",
   },
   "& .MuiDataGrid-cell": {
-    borderLeft: "1px solid #aaa",
+    borderLeft: `1px solid #aaa`, // Subtle border between cells
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
@@ -69,12 +95,32 @@ const StyledDataGrid = styled(DataGrid)({
     lineHeight: 1.4,
     padding: "6px",
     fontSize: "12px",
-  },
-
-  "& .MuiDataGrid-row": {
-    "&:hover": {
-      backgroundColor: "rgba(0, 128, 0, 0.02)",
+    color: textColor, // Default cell text color
+    "&:first-of-type": {
+      // Remove left border for the first cell in a row
+      borderLeft: "none",
     },
+  },
+  "& .MuiDataGrid-row": {
+    backgroundColor: cardBg, // Dark background for rows
+    "&:nth-of-type(odd)": {
+      backgroundColor: "rgba(255, 255, 255, 0.65)", // Slightly different shade for odd rows (zebra striping)
+    },
+    "&:hover": {
+      backgroundColor: "rgba(59, 130, 246, 0.15)", // Accent color on hover
+    },
+  },
+  "& .MuiDataGrid-footerContainer": {
+    backgroundColor: headerBg, // Match header background for footer
+    color: textColor,
+    borderTop: `1px solid ${accentColor}`,
+    borderRadius: "0 0 8px 8px", // Match table border radius
+  },
+  "& .MuiTablePagination-root": {
+    color: textColor, // Pagination text color
+  },
+  "& .MuiSvgIcon-root": {
+    color: textColor, // Pagination icons color
   },
 });
 
@@ -86,9 +132,12 @@ const AllSelectMentorList = () => {
   const [selectedMentorId, setSelectedMentorId] = useState(null); // State to store the ID of the selected donor
   const navigate = useNavigate();
   const [addMentorDialogOpen, setAddMentorDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refresh, setRefresh] = useState(false);
 
   // const BASE_URL = "http://127.0.0.1:8000";
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
 
   // Function to open the edit dialog
   const handleEditDialogOpen = (id) => {
@@ -108,6 +157,7 @@ const AllSelectMentorList = () => {
   const handleEditSuccess = () => {
     // Fetch applications from the API again after successful edit
     // fetchSelectDonorList();
+    setRefresh((prev) => !prev); // toggle to trigger useEffect
   };
 
   const handleAddMentorClick = () => {
@@ -138,17 +188,18 @@ const AllSelectMentorList = () => {
   // };
 
   useEffect(() => {
-    // Fetch applications from the API
+    setLoading(true);
     fetch(`${BASE_URL}/api/select-mentor/`)
       .then((response) => response.json())
       .then((data) => {
-        // Set the fetched applications to state
         setselectMentorList(data);
+        setLoading(false);
       })
       .catch((error) => {
         console.error("Error fetching select-Mentor:", error);
+        setLoading(false);
       });
-  }, [handleEditSuccess]); // Empty dependency array ensures the effect runs only once on component mount
+  }, [refresh]); // re-run when edit triggers a refresh
 
   const columns = [
     {
@@ -207,22 +258,15 @@ const AllSelectMentorList = () => {
     {
       field: "edit",
       headerName: "Status",
-      minWidth: 50,
+      flex: 1,
+      minWidth: 75,
       headerAlign: "center",
       align: "center",
       renderCell: (params) => (
         <Button
           size="small"
           variant="contained"
-          startIcon={<MdEdit size={14} />}
-          sx={{
-            backgroundColor: "#304c49",
-            textTransform: "capitalize", // Optional: keeps "Update" in normal case
-
-            "&:hover": {
-              backgroundColor: "#406c66", // Optional: darker on hover
-            },
-          }}
+          sx={{ backgroundColor: accentColor }}
           onClick={() => handleEdit(params.row.id)}
         >
           Update
@@ -232,23 +276,16 @@ const AllSelectMentorList = () => {
     {
       field: "delete",
       headerName: "Delete",
-      minWidth: 80,
+      flex: 1,
+      minWidth: 75,
       headerAlign: "center",
       align: "center",
       renderCell: (params) => (
         <Button
-          size="small"
           variant="contained"
-          startIcon={<MdDelete size={14} />}
-          sx={{
-            backgroundColor: "#c41d1d",
-            textTransform: "capitalize", // Optional: keeps "Update" in normal case
-
-            "&:hover": {
-              backgroundColor: "#406c66", // Optional: darker on hover
-            },
-          }}
+          sx={{ backgroundColor: "#c41d1d" }}
           onClick={() => handleDeleteConfirmationOpen(params.row.id)}
+          size="small"
         >
           Delete
         </Button>
@@ -281,59 +318,76 @@ const AllSelectMentorList = () => {
         console.error("Error deleting select mentor instence:", error);
       });
   };
-
   return (
-    <div style={{ height: 400, width: "99%", paddingTop: "20px" }}>
+    <div style={{ height: 500, width: "99%" }}>
+      {/* Buttons */}
       <Box
         sx={{
           display: "flex",
           justifyContent: "flex-end",
-          marginTop: 1,
           width: "99%",
-          marginBottom: 1,
+          mb: 1,
         }}
       >
         <Button
           variant="contained"
-          sx={{
-            backgroundColor: "#102c59",
-            marginRight: 1,
-          }}
+          sx={{ backgroundColor: accentColor, mr: 1 }}
           onClick={handleAddMentorClick}
         >
           Add Mentor
         </Button>
         <Button
           variant="contained"
-          sx={{
-            backgroundColor: "#21591c",
-          }}
+          sx={{ backgroundColor: "#21591c" }}
           onClick={handleAddClick}
         >
           Select Mentor
         </Button>
       </Box>
 
-      <StyledDataGrid
-        rows={selectMentorList}
-        columns={columns}
-        density="compact"
-        pageSize={10}
-        rowsPerPageOptions={[5, 10, 20]}
-        // loading={loading}
-        components={{
-          Toolbar: () => <CustomToolbar />,
-        }}
-        rowHeight={null} // Let row height be dynamic
-        getRowHeight={() => "auto"}
-        sx={{
-          height: "460px",
-          minWidth: "300px",
-          boxShadow: 5,
-          borderRadius: "10px",
-          overflow: "hidden", // Hide internal scrollbars
-        }}
-      />
+      {/* Conditional Grid or Loader */}
+      {loading ? (
+        <Box
+          sx={{
+            height: "400px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 2,
+            borderRadius: "10px",
+            backgroundColor: cardBg,
+            boxShadow: 3,
+          }}
+        >
+          <CircularProgress
+            size={40}
+            thickness={4}
+            style={{ color: accentColor }}
+          />
+          <Typography variant="body2" color="textSecondary">
+            Loading Mentors...
+          </Typography>
+        </Box>
+      ) : (
+        <StyledDataGrid
+          rows={selectMentorList}
+          columns={columns}
+          density="compact"
+          pageSize={10}
+          rowsPerPageOptions={[5, 10, 20]}
+          components={{
+            Toolbar: () => <CustomToolbar />,
+          }}
+          rowHeight={null}
+          getRowHeight={() => "auto"}
+          sx={{
+            height: "455px", // Adjusted height for consistency
+            minWidth: "300px",
+            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.2)",
+          }}
+        />
+      )}
 
       {/* add mentor */}
       <Dialog open={addMentorDialogOpen} onClose={handleAddMentorDialogClose}>

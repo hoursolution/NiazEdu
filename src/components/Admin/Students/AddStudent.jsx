@@ -8,6 +8,7 @@ import {
   MenuItem,
   Alert,
   Typography,
+  Box,
 } from "@mui/material";
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
@@ -21,19 +22,22 @@ const GENDER_CHOICES = [
 const CreateStudentForm = () => {
   const navigate = useNavigate();
   // const BASE_URL = "http://127.0.0.1:8000";
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
   const [users, setUsers] = useState([]);
   const [alert, setAlert] = useState(null);
   const [formData, setFormData] = useState({
     student_name: "",
     father_name: "",
     email: "",
+    cnic: "",
     last_name: "",
     gender: "",
   });
   const handleCloseAlert = () => {
     setAlert(null);
   };
+
   useEffect(() => {
     // Fetch student data for editing
     // fetch(`http://127.0.0.1:8000/api/studentDetails/${studentId}/`)
@@ -101,9 +105,18 @@ const CreateStudentForm = () => {
         display: "flex",
         justifyContent: "center",
         marginTop: 20,
+        minHeight: "100vh",
       }}
     >
-      <Paper style={{ padding: 20, maxWidth: 400 }}>
+      <Paper
+        sx={{
+          flex: 1,
+          overflowY: "auto",
+          paddingX: 3,
+          paddingY: 2,
+          maxHeight: "calc(100vh - 150px)", // Adjust height to allow room for buttons
+        }}
+      >
         {error && (
           <Alert severity="error" style={{ marginBottom: 10 }}>
             {error}
@@ -145,6 +158,19 @@ const CreateStudentForm = () => {
                 // required
               />
             </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                name="cnic"
+                label="B-form / CNIC"
+                type="number"
+                value={formData.cnic}
+                onChange={handleChange}
+                fullWidth
+                required
+                helperText="will be consider as student username"
+              />
+            </Grid>
             <Grid item xs={12}>
               <TextField
                 name="email"
@@ -154,10 +180,9 @@ const CreateStudentForm = () => {
                 onChange={handleChange}
                 fullWidth
                 required
-                helperText="will be consider as student username"
+                // helperText="will be consider as student username"
               />
             </Grid>
-
             <Grid item xs={12}>
               <TextField
                 select

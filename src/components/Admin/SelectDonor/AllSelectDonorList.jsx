@@ -4,55 +4,88 @@ import {
   GridToolbarColumnsButton,
   GridToolbarContainer,
   GridToolbarDensitySelector,
-  GridToolbarFilterButton,
+  GridToolbarFilterButton, // Kept for consistency if needed, but not used in CustomToolbar
 } from "@mui/x-data-grid";
-import styles from "../../Admin/Applications/AllApplication.module.css";
+import styles from "../../Admin/Applications/AllApplication.module.css"; // Keep if you have custom CSS, otherwise can be removed
 import {
   Box,
   Button,
   Dialog,
-  DialogActions,
   TextField,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  IconButton,
+  IconButton, // Kept for consistency if needed, but not used in renderCell for delete
   styled,
+  Typography,
+  CircularProgress, // Added Typography for consistent text styling
 } from "@mui/material";
 import DonorCreation from "../Profiles/DonorCreation";
 import { useNavigate } from "react-router-dom";
 import ConfirmationDialog from "../Applications/ConfirmationDialog";
 import EditSelectDonorForm from "./EditSelectDonor";
-import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever"; // Not used, but kept for completeness
+import { MdDelete, MdEdit } from "react-icons/md"; // For consistent icons
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline"; // For Add Donor button
+import { motion } from "framer-motion"; // Import motion for animations
+import { SelectAllOutlined } from "@mui/icons-material";
+import ViewSelectDonor from "./ViewSelectDonor";
+import { IoMdEye } from "react-icons/io";
 
-// Custom GridToolbar with the "Projection" button
+// --- Glass Lavender + Midnight Mode ---
+const primaryColor = "#312E81"; // Indigo-900 for nav
+const secondaryColor = "#A78BFA"; // Light violet
+const accentColor = "#8B5CF6"; // Purple-500 for buttons
+const bgColor = "rgba(255, 255, 255, 0.5)"; // Translucent base
+const cardBg = "rgba(255, 255, 255, 0.65)";
+const textColor = "#1E1B4B"; // Deep indigo for text
+const headerBg = "rgba(243, 232, 255, 0.25)";
+
+// Custom GridToolbar
 const CustomToolbar = () => {
   return (
-    <GridToolbarContainer>
-      <GridToolbarColumnsButton />
-      <GridToolbarFilterButton />
-      <GridToolbarDensitySelector />
-      {/* <GridToolbarExport /> */}
+    <GridToolbarContainer
+      sx={{
+        backgroundColor: cardBg, // Match table background
+        borderBottom: `1px solid ${headerBg}`,
+        padding: "8px",
+        borderRadius: "8px 8px 0 0", // Match table border radius
+      }}
+    >
+      <GridToolbarColumnsButton sx={{ color: textColor }} />
+      <GridToolbarDensitySelector sx={{ color: textColor }} />
+      {/* GridToolbarFilterButton is not used in the original CustomToolbar, but can be added if needed */}
+      {/* <GridToolbarFilterButton sx={{ color: textColor }} /> */}
     </GridToolbarContainer>
   );
 };
 
 // Custom styled DataGrid component
 const StyledDataGrid = styled(DataGrid)({
+  border: `1px solid ${cardBg}`, // Subtle border
+  borderRadius: "8px", // Rounded corners for the whole table
+  overflow: "hidden", // Ensures rounded corners are visible
+
   "& .MuiDataGrid-columnHeaders": {
-    backgroundColor: "#263238",
-    color: "white",
+    backgroundColor: headerBg, // Darker header background
+    color: textColor, // White text for headers
     fontSize: "13px",
-    textTransform: "capitalize",
+    textTransform: "uppercase", // More modern look
+    fontWeight: "bold",
+    borderBottom: `1px solid ${accentColor}`, // Accent line below headers
   },
   "& .MuiDataGrid-columnHeader": {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    borderLeft: "1px solid white",
+    borderLeft: `1px solid ${headerBg}`, // Subtle border between headers
     textAlign: "center",
     whiteSpace: "normal",
+    "&:first-of-type": {
+      // Remove left border for the first header
+      borderLeft: "none",
+    },
   },
   "& .MuiDataGrid-columnHeaderTitle": {
     whiteSpace: "normal",
@@ -64,7 +97,7 @@ const StyledDataGrid = styled(DataGrid)({
     textAlign: "center",
   },
   "& .MuiDataGrid-cell": {
-    borderLeft: "1px solid #aaa",
+    borderLeft: `1px solid #aaa`, // Subtle border between cells
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
@@ -74,17 +107,35 @@ const StyledDataGrid = styled(DataGrid)({
     lineHeight: 1.4,
     padding: "6px",
     fontSize: "12px",
-  },
-
-  "& .MuiDataGrid-row": {
-    "&:hover": {
-      backgroundColor: "rgba(0, 128, 0, 0.02)",
+    color: textColor, // Default cell text color
+    "&:first-of-type": {
+      // Remove left border for the first cell in a row
+      borderLeft: "none",
     },
+  },
+  "& .MuiDataGrid-row": {
+    backgroundColor: cardBg, // Dark background for rows
+    "&:nth-of-type(odd)": {
+      backgroundColor: "rgba(255, 255, 255, 0.65)", // Slightly different shade for odd rows (zebra striping)
+    },
+    "&:hover": {
+      backgroundColor: "rgba(59, 130, 246, 0.15)", // Accent color on hover
+    },
+  },
+  "& .MuiDataGrid-footerContainer": {
+    backgroundColor: headerBg, // Match header background for footer
+    color: textColor,
+    borderTop: `1px solid ${accentColor}`,
+    borderRadius: "0 0 8px 8px", // Match table border radius
+  },
+  "& .MuiTablePagination-root": {
+    color: textColor, // Pagination text color
+  },
+  "& .MuiSvgIcon-root": {
+    color: textColor, // Pagination icons color
   },
 });
 
-const BASE_URL = "https://zeenbackend-production.up.railway.app";
-// const BASE_URL = "http://127.0.0.1:8000";
 const AllSelectDonorList = () => {
   const [selectDonorList, setSelectDonorList] = useState([]);
   const [filteredDonorList, setFilteredDonorList] = useState([]);
@@ -92,15 +143,22 @@ const AllSelectDonorList = () => {
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedDonorId, setSelectedDonorId] = useState(null);
   const [addDonorDialogOpen, setAddDonorDialogOpen] = useState(false);
   const [studentName, setStudentName] = useState("");
   const [selectedDonor, setSelectedDonor] = useState("");
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
 
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
+  // const BASE_URL = "http://127.0.0.1:8000";
+
   const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
       const [donorResponse, selectDonorResponse, allApplicationsResponse] =
         await Promise.all([
@@ -173,9 +231,11 @@ const AllSelectDonorList = () => {
       setSelectDonorList(updatedDonorList);
       setFilteredDonorList(updatedDonorList);
       setError(null);
+      setLoading(false);
     } catch (err) {
       console.error("Error fetching data:", err);
       setError("Failed to load data. Please try again later.");
+      setLoading(false);
     }
   }, []);
 
@@ -185,7 +245,7 @@ const AllSelectDonorList = () => {
 
     if (studentName) {
       filteredData = filteredData.filter((donor) =>
-        donor.student?.student_name
+        donor.displayNameWithOrder
           ?.toLowerCase()
           .includes(studentName.toLowerCase())
       );
@@ -212,6 +272,7 @@ const AllSelectDonorList = () => {
       }
 
       setSelectDonorList((prev) => prev.filter((app) => app.id !== id));
+      setFilteredDonorList((prev) => prev.filter((app) => app.id !== id)); // Also update filtered list
       setDeleteConfirmationOpen(false);
     } catch (err) {
       console.error("Error deleting donor:", err);
@@ -234,8 +295,14 @@ const AllSelectDonorList = () => {
     setEditDialogOpen(true);
   };
 
+  // Event handlers
+  const handleViewDialogOpen = (id) => {
+    setSelectedDonorId(id);
+    setViewDialogOpen(true);
+  };
+
   const handleEditSuccess = () => {
-    fetchData();
+    fetchData(); // Re-fetch data to update the table after edit
   };
 
   const columns = [
@@ -269,9 +336,13 @@ const AllSelectDonorList = () => {
       align: "center",
       renderCell: (params) =>
         params.row.donor ? (
-          <span>{params.row?.donor?.donor_name}</span>
+          <Typography sx={{ fontSize: "12px", color: textColor }}>
+            {params.row?.donor?.donor_name}
+          </Typography>
         ) : (
-          <span style={{ color: "red" }}>not selected</span>
+          <Typography sx={{ fontSize: "12px", color: "#EF4444" }}>
+            not selected
+          </Typography>
         ),
     },
     {
@@ -283,197 +354,203 @@ const AllSelectDonorList = () => {
       align: "center",
       renderCell: (params) =>
         params.row?.selection_date ? (
-          <span>{params.row?.selection_date}</span>
+          <Typography sx={{ fontSize: "12px", color: textColor }}>
+            {params.row?.selection_date}
+          </Typography>
         ) : (
-          <span style={{ color: "red" }}>not selected</span>
+          <Typography sx={{ fontSize: "12px", color: "#EF4444" }}>
+            not selected
+          </Typography>
         ),
     },
     {
       field: "edit",
       headerName: "STATUS",
       flex: 1,
-      minWidth: 50,
+      minWidth: 40,
       headerAlign: "center",
       align: "center",
       renderCell: (params) => (
-        <Button
-          size="small"
-          variant="contained"
-          sx={{ backgroundColor: "#304c49" }}
-          onClick={() => handleEditDialogOpen(params.row.id)}
-        >
-          Update
-        </Button>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<MdEdit size={14} />}
+            sx={{
+              backgroundColor: accentColor, // Use accent color
+              color: "white",
+              textTransform: "capitalize",
+              fontSize: "10px", // Smaller font for button
+              padding: "4px 8px",
+              "&:hover": {
+                backgroundColor: "#2563EB", // Darker blue on hover
+              },
+            }}
+            onClick={() => handleEditDialogOpen(params.row.id)}
+          >
+            Update
+          </Button>
+        </motion.div>
       ),
     },
-    // {
-    //   field: "delete",
-    //   headerName: "DELETE",
-    //   flex: 1,
-    //   minWidth: 50,
-    //   headerAlign: "center",
-    //   align: "center",
-    //   renderCell: (params) => (
-    //     <IconButton
-    //       aria-label="delete"
-    //       size="small"
-    //       onClick={() => {
-    //         setDeleteId(params.row.id);
-    //         setDeleteConfirmationOpen(true);
-    //       }}
-    //     >
-    //       <DeleteForeverIcon sx={{ color: "#c41d1d" }} />
-    //     </IconButton>
-    //   ),
-    // },
     {
       field: "delete",
       headerName: "Delete",
       flex: 1,
-      minWidth: 75,
+      minWidth: 100,
       headerAlign: "center",
       align: "center",
       renderCell: (params) => (
-        <Button
-          variant="contained"
-          sx={{ backgroundColor: "#c41d1d" }}
-          onClick={() => {
-            setDeleteId(params.row.id);
-            setDeleteConfirmationOpen(true);
-          }}
-          size="small"
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          style={{ display: "flex", gap: 4 }}
         >
-          Delete
-        </Button>
+          <Button
+            variant="contained"
+            startIcon={<MdDelete size={14} />}
+            sx={{
+              backgroundColor: "#EF4444", // Red for delete
+              color: "white",
+              textTransform: "capitalize",
+              fontSize: "10px", // Smaller font for button
+              padding: "4px 8px",
+              "&:hover": {
+                backgroundColor: "#DC2626", // Darker red on hover
+              },
+            }}
+            onClick={() => {
+              setDeleteId(params.row.id);
+              setDeleteConfirmationOpen(true);
+            }}
+            size="small"
+          >
+            Delete
+          </Button>
+          {/* <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}> */}
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<IoMdEye size={14} />}
+            sx={{
+              backgroundColor: accentColor, // Use accent color
+              color: "white",
+              textTransform: "capitalize",
+              fontSize: "10px", // Smaller font for button
+              padding: "4px 8px",
+              "&:hover": {
+                backgroundColor: "#2563EB", // Darker blue on hover
+              },
+            }}
+            onClick={() => handleViewDialogOpen(params.row.id)}
+          >
+            View
+          </Button>
+        </motion.div>
       ),
     },
   ];
 
   if (error) {
     return (
-      <Box color="error.main" p={2}>
+      <Box
+        color="error.main"
+        p={2}
+        sx={{
+          color: "#EF4444",
+          textAlign: "center",
+          fontSize: "16px",
+          padding: "20px",
+        }}
+      >
         {error}
       </Box>
     );
   }
 
   return (
-    <Box sx={{ width: "99%", height: 400 }}>
+    <Box
+      sx={{
+        width: "100%",
+        overflowX: "auto",
+        // paddingTop: "10px",
+        backgroundColor: bgColor,
+        minHeight: "calc(100vh - 50px)",
+        padding: "10px",
+      }}
+    >
       <Box
         sx={{
           display: "flex",
-          flexDirection: "column",
+          flexDirection: { xs: "column", sm: "row" }, // Stack on small screens
           justifyContent: "space-between",
           alignItems: "center",
           gap: 2,
-          mb: 2,
-          mt: 1,
-          px: { xs: 2, sm: 4 },
+          marginBottom: 3,
+          padding: 2,
+          backgroundColor: cardBg, // Card background for filters/button
+          borderRadius: "8px",
+          boxShadow: "0px 4px 15px rgba(0, 0, 0, 0.2)",
         }}
       >
+        {/* Filters */}
         <Box
           sx={{
-            width: "100%",
+            width: { xs: "100%", sm: "auto" },
             display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
             gap: 2,
-          }}
-        >
-          <Button
-            variant="contained"
-            sx={{
-              backgroundColor: "#102c59",
-              marginRight: 1,
-            }}
-            onClick={() => setAddDonorDialogOpen(true)}
-          >
-            Add Donor
-          </Button>
-          <Button
-            variant="contained"
-            sx={{
-              backgroundColor: "#21591c",
-            }}
-            onClick={() => navigate("/Admin/addselectDonor")}
-          >
-            Select Donor
-          </Button>
-        </Box>
-
-        <Box
-          sx={{
-            width: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 2,
+            justifyContent: { xs: "center", sm: "flex-end" },
+            flexGrow: 1, // Allow filters to take available space
+            order: { xs: 1, sm: 2 }, // Order for responsiveness
           }}
         >
           <TextField
             label="Search by Student Name"
-            variant="filled"
+            variant="outlined" // Changed to outlined for consistency
             size="small"
             value={studentName}
             onChange={(e) => setStudentName(e.target.value)}
             sx={{
-              width: "50%",
-              backgroundColor: "#FFFFFF",
-              borderRadius: "8px",
-              boxShadow: "0 1px 4px rgba(0, 0, 0, 0.1)",
-              "& .MuiFilledInput-root": {
-                borderTopLeftRadius: "8px",
-                borderTopRightRadius: "8px",
-                backgroundColor: "#FFFFFF",
-                paddingTop: "6px",
-                paddingBottom: "6px",
-                height: "36px", // adjust height
-                "&:before": {
-                  borderBottom: "none", // remove default bottom border
-                },
-                "&:after": {
-                  borderBottom: "none", // remove focused bottom border
-                },
+              width: { xs: "100%", sm: "50%" },
+              "& .MuiOutlinedInput-root": {
+                color: textColor,
+                "& fieldset": { borderColor: textColor },
+                "&:hover fieldset": { borderColor: accentColor },
+                "&.Mui-focused fieldset": { borderColor: accentColor },
               },
               "& .MuiInputLabel-root": {
-                fontSize: "12px",
-                top: "-6px",
+                color: textColor,
+              },
+              "& .MuiInputLabel-root.Mui-focused": {
+                color: accentColor,
               },
             }}
           />
           <FormControl
             size="small"
-            variant="filled"
+            variant="outlined" // Changed to outlined for consistency
             sx={{
-              width: "20%",
-              backgroundColor: "#FFFFFF",
-              borderRadius: "8px",
-              boxShadow: "0 1px 4px rgba(0, 0, 0, 0.1)",
-              "& .MuiFilledInput-root": {
-                borderTopLeftRadius: "8px",
-                borderTopRightRadius: "8px",
-                backgroundColor: "#FFFFFF",
-                paddingTop: "6px",
-                paddingBottom: "6px",
-                height: "36px", // adjust height
-                "&:before": {
-                  borderBottom: "none", // remove default bottom border
-                },
-                "&:after": {
-                  borderBottom: "none", // remove focused bottom border
-                },
-              },
-              "& .MuiInputLabel-root": {
-                fontSize: "12px",
-                top: "-6px",
-              },
+              width: { xs: "100%", sm: "30%" },
             }}
           >
-            <InputLabel>Search by Donor</InputLabel>
+            <InputLabel sx={{ color: textColor }}>Search by Donor</InputLabel>
             <Select
               value={selectedDonor}
               onChange={(e) => setSelectedDonor(e.target.value)}
-              label="Filter by Donor"
+              label="Search by Donor"
+              sx={{
+                color: textColor,
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: textColor,
+                },
+                "&:hover .MuiOutlinedInput-notchedOutline": {
+                  borderColor: accentColor,
+                },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor: accentColor,
+                },
+                "& .MuiSvgIcon-root": { color: textColor }, // Dropdown arrow color
+              }}
             >
               <MenuItem value="">All</MenuItem>
               {donors.map((donor) => (
@@ -484,31 +561,110 @@ const AllSelectDonorList = () => {
             </Select>
           </FormControl>
         </Box>
+
+        {/* Add Donor & Select Donor Buttons */}
+        <Box
+          sx={{
+            width: { xs: "100%", sm: "auto" },
+            display: "flex",
+            gap: 2,
+            justifyContent: { xs: "center", sm: "flex-start" },
+            order: { xs: 2, sm: 1 }, // Order for responsiveness
+          }}
+        >
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              variant="contained"
+              sx={{
+                backgroundColor: accentColor,
+                color: "white",
+                textTransform: "capitalize",
+                "&:hover": {
+                  backgroundColor: "#1C3070",
+                },
+              }}
+              onClick={() => setAddDonorDialogOpen(true)}
+              endIcon={<AddCircleOutlineIcon />}
+            >
+              Add Donor
+            </Button>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              variant="contained"
+              sx={{
+                backgroundColor: "#21591c", // Specific green from original
+                color: "white",
+                textTransform: "capitalize",
+                "&:hover": {
+                  backgroundColor: "#1A4516",
+                },
+              }}
+              onClick={() => navigate("/Admin/addselectDonor")}
+              endIcon={<SelectAllOutlined />}
+            >
+              Select Donor
+            </Button>
+          </motion.div>
+        </Box>
       </Box>
 
-      <StyledDataGrid
-        rows={filteredDonorList}
-        columns={columns}
-        density="compact"
-        pageSize={10}
-        rowsPerPageOptions={[5, 10, 20]}
-        // loading={loading}
-        components={{
-          Toolbar: () => <CustomToolbar />,
-        }}
-        rowHeight={null} // Let row height be dynamic
-        getRowHeight={() => "auto"}
-        sx={{
-          height: "420px",
-          minWidth: "300px",
-          boxShadow: 5,
-          borderRadius: "10px",
-          overflow: "hidden", // Hide internal scrollbars
-        }}
-      />
+      {/* Conditional Grid or Loader */}
+      {loading ? (
+        <Box
+          sx={{
+            height: "400px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 2,
+            borderRadius: "10px",
+            backgroundColor: cardBg,
+            boxShadow: 3,
+          }}
+        >
+          <CircularProgress
+            size={40}
+            thickness={4}
+            style={{ color: accentColor }}
+          />
+          <Typography variant="body2" color="textSecondary">
+            Loading Donors...
+          </Typography>
+        </Box>
+      ) : (
+        <StyledDataGrid
+          rows={filteredDonorList}
+          columns={columns}
+          density="compact"
+          pageSize={10}
+          rowsPerPageOptions={[5, 10, 20]}
+          components={{
+            Toolbar: CustomToolbar,
+          }}
+          rowHeight={null} // Let row height be dynamic
+          getRowHeight={() => "auto"}
+          sx={{
+            height: "405px", // Adjusted height for consistency
+            minWidth: "300px",
+            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.2)",
+            // Consistent shadow
+          }}
+        />
+      )}
+
       <Dialog
         open={addDonorDialogOpen}
         onClose={() => setAddDonorDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            backgroundColor: cardBg, // Match card background
+            color: textColor,
+            borderRadius: "8px",
+            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.3)",
+          },
+        }}
       >
         <DonorCreation onClose={() => setAddDonorDialogOpen(false)} />
       </Dialog>
@@ -518,11 +674,40 @@ const AllSelectDonorList = () => {
         onClose={() => setEditDialogOpen(false)}
         fullWidth
         maxWidth="md"
+        PaperProps={{
+          sx: {
+            backgroundColor: cardBg, // Match card background
+            color: textColor,
+            borderRadius: "8px",
+            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.3)",
+          },
+        }}
       >
         <EditSelectDonorForm
           SelectDonorId={selectedDonorId}
           handleCloseDialog={() => setEditDialogOpen(false)}
           handleEditSuccess={handleEditSuccess}
+        />
+      </Dialog>
+
+      <Dialog
+        open={viewDialogOpen}
+        onClose={() => setViewDialogOpen(false)}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{
+          sx: {
+            backgroundColor: cardBg, // Match card background
+            color: textColor,
+            borderRadius: "8px",
+            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.3)",
+          },
+        }}
+      >
+        <ViewSelectDonor
+          SelectDonorId={selectedDonorId}
+          handleCloseDialog={() => setViewDialogOpen(false)}
+          // handleEditSuccess={handleEditSuccess}
         />
       </Dialog>
 

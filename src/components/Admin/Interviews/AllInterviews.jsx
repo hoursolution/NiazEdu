@@ -4,9 +4,8 @@ import {
   GridToolbarColumnsButton,
   GridToolbarContainer,
   GridToolbarDensitySelector,
-  GridToolbarFilterButton,
 } from "@mui/x-data-grid";
-import styles from "../../Admin/Applications/AllApplication.module.css";
+import styles from "../../Admin/Applications/AllApplication.module.css"; // Keep if you have custom CSS, otherwise can be removed
 import {
   Box,
   Button,
@@ -17,44 +16,75 @@ import {
   InputLabel,
   TextField,
   styled,
-  colors,
   Dialog,
+  Typography, // Added Typography for consistent text styling
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import ConfirmationDialog from "../Applications/ConfirmationDialog";
-import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever"; // Not used, but kept for completeness
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
-import InfoIcon from "@mui/icons-material/Info";
-import EditIcon from "@mui/icons-material/Edit";
+import CancelIcon from "@mui/icons-material/Cancel"; // For Rejected status
+import InfoIcon from "@mui/icons-material/Info"; // Not used, but kept for completeness
+import EditIcon from "@mui/icons-material/Edit"; // Not used, but kept for completeness
 import { MdDelete, MdEdit } from "react-icons/md";
 import ViewInterviewDetails from "./ViewInterviewDetails";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline"; // For Add Interview button
+import { motion } from "framer-motion"; // Import motion for animations
+import CircularProgress from "@mui/material/CircularProgress";
+import { IoMdEye } from "react-icons/io";
 
-// Custom GridToolbar with the "Projection" button
+// --- Glass Lavender + Midnight Mode ---
+const primaryColor = "#312E81"; // Indigo-900 for nav
+const secondaryColor = "#A78BFA"; // Light violet
+const accentColor = "#8B5CF6"; // Purple-500 for buttons
+const bgColor = "rgba(255, 255, 255, 0.5)"; // Translucent base
+const cardBg = "rgba(255, 255, 255, 0.65)";
+const textColor = "#1E1B4B"; // Deep indigo for text
+const headerBg = "rgba(243, 232, 255, 0.25)";
+
+// Custom GridToolbar
 const CustomToolbar = () => {
   return (
-    <GridToolbarContainer>
-      <GridToolbarColumnsButton />
-      <GridToolbarDensitySelector />
+    <GridToolbarContainer
+      sx={{
+        backgroundColor: cardBg, // Match table background
+        borderBottom: `1px solid ${headerBg}`,
+        padding: "8px",
+        borderRadius: "8px 8px 0 0", // Match table border radius
+      }}
+    >
+      <GridToolbarColumnsButton sx={{ color: textColor }} />
+      <GridToolbarDensitySelector sx={{ color: textColor }} />
     </GridToolbarContainer>
   );
 };
 
 // Custom styled DataGrid component
 const StyledDataGrid = styled(DataGrid)({
+  border: `1px solid ${cardBg}`, // Subtle border
+  borderRadius: "8px", // Rounded corners for the whole table
+  overflow: "hidden", // Ensures rounded corners are visible
+
   "& .MuiDataGrid-columnHeaders": {
-    backgroundColor: "#263238",
-    color: "white",
+    backgroundColor: headerBg, // Darker header background
+    color: textColor, // White text for headers
     fontSize: "13px",
-    textTransform: "capitalize",
+    textTransform: "uppercase", // More modern look
+    fontWeight: "bold",
+    borderBottom: `1px solid ${accentColor}`, // Accent line below headers
   },
   "& .MuiDataGrid-columnHeader": {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    borderLeft: "1px solid white",
+    borderLeft: `1px solid ${headerBg}`, // Subtle border between headers
     textAlign: "center",
     whiteSpace: "normal",
+    "&:first-of-type": {
+      // Remove left border for the first header
+      borderLeft: "none",
+    },
   },
   "& .MuiDataGrid-columnHeaderTitle": {
     whiteSpace: "normal",
@@ -66,7 +96,7 @@ const StyledDataGrid = styled(DataGrid)({
     textAlign: "center",
   },
   "& .MuiDataGrid-cell": {
-    borderLeft: "1px solid #aaa",
+    borderLeft: `1px solid #aaa`, // Subtle border between cells
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
@@ -76,12 +106,32 @@ const StyledDataGrid = styled(DataGrid)({
     lineHeight: 1.4,
     padding: "6px",
     fontSize: "12px",
-  },
-
-  "& .MuiDataGrid-row": {
-    "&:hover": {
-      backgroundColor: "rgba(0, 128, 0, 0.02)",
+    color: textColor, // Default cell text color
+    "&:first-of-type": {
+      // Remove left border for the first cell in a row
+      borderLeft: "none",
     },
+  },
+  "& .MuiDataGrid-row": {
+    backgroundColor: cardBg, // Dark background for rows
+    "&:nth-of-type(odd)": {
+      backgroundColor: "rgba(255, 255, 255, 0.65)", // Slightly different shade for odd rows (zebra striping)
+    },
+    "&:hover": {
+      backgroundColor: "rgba(59, 130, 246, 0.15)", // Accent color on hover
+    },
+  },
+  "& .MuiDataGrid-footerContainer": {
+    backgroundColor: headerBg, // Match header background for footer
+    color: textColor,
+    borderTop: `1px solid ${accentColor}`,
+    borderRadius: "0 0 8px 8px", // Match table border radius
+  },
+  "& .MuiTablePagination-root": {
+    color: textColor, // Pagination text color
+  },
+  "& .MuiSvgIcon-root": {
+    color: textColor, // Pagination icons color
   },
 });
 
@@ -92,14 +142,11 @@ const AllInterviews = () => {
   const [deleteId, setDeleteId] = useState(null);
   const [statusFilter, setStatusFilter] = useState(""); // Default empty, shows all
   const [nameFilter, setNameFilter] = useState(""); // Status filter
-  const [paginationModel, setPaginationModel] = useState({
-    page: 0,
-    pageSize: 10,
-  });
 
   const [addMentorDialogOpen, setAddMentorDialogOpen] = useState(false);
   const [viewHousehold, setHousehold] = useState("");
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -108,15 +155,16 @@ const AllInterviews = () => {
     }
   }, [navigate]);
 
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
-  // const BASE_URL = "http://127.0.0.1:8000";
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
+  // const BASE_URL = "http://127.0.0.1:8000";/
 
   useEffect(() => {
     fetch(`${BASE_URL}/api/interviews/`)
       .then((response) => response.json())
       .then((data) => {
         // Step 1: Group by student full name
-        // console.log(data);
+        console.log(data);
         const grouped = {};
         data.forEach((item) => {
           const key = `${item.application.name} ${item.application.last_name}`;
@@ -155,12 +203,12 @@ const AllInterviews = () => {
 
         setApplications(updatedData);
         setFilteredApplications(updatedData);
+        setLoading(false); // ✅ Add this
       })
       .catch((error) => {
         console.error("Error fetching interviews:", error);
       });
   }, []);
-
   // Filter logic
   useEffect(() => {
     let filtered = applications;
@@ -219,56 +267,74 @@ const AllInterviews = () => {
       minWidth: 100,
       headerAlign: "center",
       align: "center",
+      renderCell: (params) => {
+        const name = params.row.interviewer_name;
+        const isSelected = !!name;
+        return (
+          <Typography
+            sx={{
+              color: isSelected ? textColor : "#EF4444",
+              fontSize: "12px", // Consistent font size
+            }}
+          >
+            {isSelected ? name : "not selected"}
+          </Typography>
+        );
+      },
     },
     {
       field: "interview_date",
       headerName: "Interview Date",
-      // flex: 1,
       minWidth: 80,
       headerAlign: "center",
       align: "center",
-      renderCell: (params) =>
-        params.row?.interview_date ? (
-          <span>{params.row?.interview_date}</span>
-        ) : (
-          <span style={{ color: "red" }}>not selected</span>
-        ),
+      renderCell: (params) => {
+        const date = params.row?.interview_date;
+        const isSelected = !!date;
+        return (
+          <Typography
+            sx={{
+              color: isSelected ? textColor : "#EF4444",
+              fontSize: "12px", // Consistent font size
+            }}
+          >
+            {isSelected ? date : "not selected"}
+          </Typography>
+        );
+      },
     },
     {
       field: "interviewer_recommendation",
-      headerName: "Reccomendation",
-      // flex: 1,
+      headerName: "Recommendation",
       minWidth: 150,
       headerAlign: "center",
       align: "center",
       renderCell: (params) => {
-        let bgColor = "#2196F3"; // default gray
-
         return (
-          <Button
-            sx={{
-              backgroundColor: bgColor,
-              color: "#fff",
-              px: "2px",
-              py: 0.5,
-              borderRadius: 1,
-              textAlign: "center",
-              width: "60%",
-              fontSize: "12px",
-              fontWeight: 600,
-              textTransform: "capitalize",
-            }}
-            onClick={() => handleViewDetails(params)}
-          >
-            View Details
-          </Button>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              startIcon={<IoMdEye size={14} />}
+              sx={{
+                backgroundColor: accentColor, // Use accent color
+                color: "white",
+                textTransform: "capitalize",
+                fontSize: "10px", // Smaller font for button
+                padding: "4px 8px",
+                "&:hover": {
+                  backgroundColor: "#2563EB", // Darker blue on hover
+                },
+              }}
+              onClick={() => handleViewDetails(params)}
+            >
+              View Details
+            </Button>
+          </motion.div>
         );
       },
     },
     {
       field: "status",
       headerName: "Status",
-      // flex: 1,
       minWidth: 210,
       headerAlign: "center",
       align: "center",
@@ -279,23 +345,21 @@ const AllInterviews = () => {
 
         switch (status) {
           case "Accepted by interviewer":
-            buttonColor = "#4CAF50"; // Green
+            buttonColor = "#10B981"; // Green
             buttonIcon = (
-              <CheckCircleIcon style={{ color: "#fff", fontSize: "12px" }} />
+              <CheckCircleIcon sx={{ color: "#fff", fontSize: "12px" }} />
             );
             break;
 
           case "pending":
-            buttonColor = "#2196F3"; // Blue
-            buttonIcon = (
-              <ErrorIcon style={{ color: "#fff", fontSize: "12px" }} />
-            );
+            buttonColor = "#F59E0B"; // Amber
+            buttonIcon = <ErrorIcon sx={{ color: "#fff", fontSize: "12px" }} />;
             break;
 
           case "Rejected by interviewer":
-            buttonColor = "#F44336"; // Red
+            buttonColor = "#EF4444"; // Red
             buttonIcon = (
-              <CancelIcon style={{ color: "#fff", fontSize: "12px" }} />
+              <CancelIcon sx={{ color: "#fff", fontSize: "12px" }} />
             );
             break;
 
@@ -309,11 +373,14 @@ const AllInterviews = () => {
             variant="contained"
             startIcon={buttonIcon}
             size="small"
-            style={{
+            sx={{
               backgroundColor: buttonColor,
               color: "#fff",
               textTransform: "none",
-              pointerEvents: "none",
+              pointerEvents: "none", // Make it non-interactive
+              fontSize: "10px", // Smaller font for status button
+              padding: "4px 8px",
+              fontWeight: "bold",
             }}
           >
             {status}
@@ -324,26 +391,30 @@ const AllInterviews = () => {
     {
       field: "edit",
       headerName: "Interview",
-      minWidth: 50,
+      minWidth: 70,
       headerAlign: "center",
       align: "center",
       renderCell: (params) => (
-        <Button
-          size="small"
-          variant="contained"
-          startIcon={<MdEdit size={14} />}
-          sx={{
-            backgroundColor: "#304c49",
-            textTransform: "capitalize", // Optional: keeps "Update" in normal case
-
-            "&:hover": {
-              backgroundColor: "#406c66", // Optional: darker on hover
-            },
-          }}
-          onClick={() => handleEdit(params.row.id)}
-        >
-          Update
-        </Button>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<MdEdit size={14} />}
+            sx={{
+              backgroundColor: accentColor, // Use accent color
+              color: "white",
+              textTransform: "capitalize",
+              fontSize: "10px", // Smaller font for button
+              padding: "4px 8px",
+              "&:hover": {
+                backgroundColor: "#2563EB", // Darker blue on hover
+              },
+            }}
+            onClick={() => handleEdit(params.row.id)}
+          >
+            Update
+          </Button>
+        </motion.div>
       ),
     },
     {
@@ -353,22 +424,26 @@ const AllInterviews = () => {
       headerAlign: "center",
       align: "center",
       renderCell: (params) => (
-        <Button
-          size="small"
-          variant="contained"
-          startIcon={<MdDelete size={14} />}
-          sx={{
-            backgroundColor: "#c41d1d",
-            textTransform: "capitalize", // Optional: keeps "Update" in normal case
-
-            "&:hover": {
-              backgroundColor: "#406c66", // Optional: darker on hover
-            },
-          }}
-          onClick={() => handleDeleteConfirmationOpen(params.row.id)}
-        >
-          Delete
-        </Button>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<MdDelete size={14} />}
+            sx={{
+              backgroundColor: "#EF4444", // Red for delete
+              color: "white",
+              textTransform: "capitalize",
+              fontSize: "10px", // Smaller font for button
+              padding: "4px 8px",
+              "&:hover": {
+                backgroundColor: "#DC2626", // Darker red on hover
+              },
+            }}
+            onClick={() => handleDeleteConfirmationOpen(params.row.id)}
+          >
+            Delete
+          </Button>
+        </motion.div>
       ),
     },
   ];
@@ -404,7 +479,16 @@ const AllInterviews = () => {
   };
 
   return (
-    <div style={{ height: 400, width: "99%", paddingTop: "20px" }}>
+    <Box
+      sx={{
+        width: "100%",
+        overflowX: "auto",
+        paddingTop: "20px",
+        backgroundColor: bgColor,
+        minHeight: "calc(100vh - 50px)",
+        padding: "20px",
+      }}
+    >
       {/* Filter and Add Button */}
       <Box
         sx={{
@@ -413,77 +497,55 @@ const AllInterviews = () => {
           justifyContent: "space-between",
           alignItems: "center",
           gap: 2,
-          marginBottom: 2,
-          paddingX: { xs: 2, sm: 4 }, // Adjust padding for small and large screens
+          marginBottom: 3,
+          padding: 2,
+          backgroundColor: cardBg, // Card background for filters/button
+          borderRadius: "8px",
+          boxShadow: "0px 4px 15px rgba(0, 0, 0, 0.2)",
         }}
       >
         {/* Name Filter */}
         <TextField
           label="Search by Name"
-          variant="filled"
+          variant="outlined"
           size="small"
           value={nameFilter}
           onChange={(e) => setNameFilter(e.target.value)}
           sx={{
-            width: "40%",
-            backgroundColor: "#FFFFFF",
-            borderRadius: "8px",
-            boxShadow: "0 1px 4px rgba(0, 0, 0, 0.1)",
-            "& .MuiFilledInput-root": {
-              borderTopLeftRadius: "8px",
-              borderTopRightRadius: "8px",
-              backgroundColor: "#FFFFFF",
-              paddingTop: "6px",
-              paddingBottom: "6px",
-              height: "36px", // adjust height
-              "&:before": {
-                borderBottom: "none", // remove default bottom border
-              },
-              "&:after": {
-                borderBottom: "none", // remove focused bottom border
-              },
+            width: { xs: "100%", sm: "30%" },
+            "& .MuiOutlinedInput-root": {
+              color: textColor,
+              "& fieldset": { borderColor: textColor },
+              "&:hover fieldset": { borderColor: accentColor },
+              "&.Mui-focused fieldset": { borderColor: accentColor },
             },
             "& .MuiInputLabel-root": {
-              fontSize: "12px",
-              top: "-6px",
+              color: textColor,
+            },
+            "& .MuiInputLabel-root.Mui-focused": {
+              color: accentColor,
             },
           }}
         />
 
         {/* Status Filter */}
-        <FormControl
-          variant="filled"
-          sx={{
-            width: "20%",
-            backgroundColor: "#FFFFFF",
-            borderRadius: "8px",
-            boxShadow: "0 1px 4px rgba(0, 0, 0, 0.1)",
-            "& .MuiFilledInput-root": {
-              borderTopLeftRadius: "8px",
-              borderTopRightRadius: "8px",
-              backgroundColor: "#FFFFFF",
-              paddingTop: "6px",
-              paddingBottom: "6px",
-              height: "36px", // adjust height
-              "&:before": {
-                borderBottom: "none", // remove default bottom border
-              },
-              "&:after": {
-                borderBottom: "none", // remove focused bottom border
-              },
-            },
-            "& .MuiInputLabel-root": {
-              fontSize: "12px",
-              top: "-6px",
-            },
-          }}
-          size="small"
-        >
-          <InputLabel>Status</InputLabel>
+        <FormControl sx={{ width: { xs: "100%", sm: "30%" } }} size="small">
+          {/* <InputLabel sx={{ color: textColor }}>Status</InputLabel> */}
           <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             displayEmpty
+            sx={{
+              color: textColor,
+              "& .MuiOutlinedInput-notchedOutline": { borderColor: textColor },
+              "&:hover .MuiOutlinedInput-notchedOutline": {
+                borderColor: accentColor,
+              },
+              "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                borderColor: accentColor,
+              },
+              "& .MuiSvgIcon-root": { color: textColor }, // Dropdown arrow color
+            }}
           >
             <MenuItem value="">All</MenuItem>
             <MenuItem value="pending">Pending</MenuItem>
@@ -497,41 +559,70 @@ const AllInterviews = () => {
         </FormControl>
 
         {/* Add Interview Button */}
-        <Button
-          variant="contained"
-          sx={{
-            backgroundColor: "#102c59",
-            marginRight: 1,
-          }}
-          onClick={() => navigate("/Admin/addInterview")}
-        >
-          Add Interview
-        </Button>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            variant="contained"
+            sx={{
+              backgroundColor: accentColor,
+              color: "white",
+              textTransform: "capitalize",
+              width: { xs: "100%", sm: "auto" },
+              "&:hover": {
+                backgroundColor: "#1C3070",
+              },
+            }}
+            onClick={() => navigate("/Admin/addInterview")}
+            endIcon={<AddCircleOutlineIcon />}
+          >
+            Add Interview
+          </Button>
+        </motion.div>
       </Box>
 
       {/* Data Grid */}
-      <Box sx={{ width: "100%", overflowX: "auto", whiteSpace: "nowrap" }}>
+
+      {loading ? (
+        <Box
+          sx={{
+            height: "400px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 2,
+            borderRadius: "10px",
+            backgroundColor: cardBg,
+            boxShadow: 3,
+          }}
+        >
+          <CircularProgress
+            size={40}
+            thickness={4}
+            style={{ color: accentColor }}
+          />
+          <Typography variant="body2" color="textSecondary">
+            Loading Interviews...
+          </Typography>
+        </Box>
+      ) : (
         <StyledDataGrid
           rows={filteredApplications}
           columns={columns}
           density="compact"
           pageSize={10}
           rowsPerPageOptions={[5, 10, 20]}
-          // loading={loading}
           components={{
-            Toolbar: () => <CustomToolbar />,
+            Toolbar: CustomToolbar,
           }}
-          rowHeight={null} // Let row height be dynamic
+          rowHeight={null}
           getRowHeight={() => "auto"}
           sx={{
-            height: "450px",
+            height: "405px",
             minWidth: "300px",
-            boxShadow: 5,
-            borderRadius: "10px",
-            overflow: "hidden", // Hide internal scrollbars
+            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.2)",
           }}
         />
-      </Box>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <ConfirmationDialog
@@ -551,13 +642,21 @@ const AllInterviews = () => {
         maxWidth="md"
         open={addMentorDialogOpen}
         onClose={handleAddMentorDialogClose}
+        PaperProps={{
+          sx: {
+            backgroundColor: cardBg, // Match card background
+            color: textColor,
+            borderRadius: "8px",
+            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.3)",
+          },
+        }}
       >
         <ViewInterviewDetails
           onClose={handleAddMentorDialogClose}
           viewHousehold={viewHousehold}
         />
       </Dialog>
-    </div>
+    </Box>
   );
 };
 

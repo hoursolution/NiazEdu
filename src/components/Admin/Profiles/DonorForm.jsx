@@ -22,13 +22,8 @@ const DonorForm = ({ onSubmit }) => {
 
   return (
     <Container maxWidth="sm" sx={{ marginTop: 2 }}>
-      <Paper sx={{ padding: 2 }}>
-        <Typography
-          sx={{ fontWeight: 700, color: "#0a2547" }}
-          variant="h5"
-          align="center"
-          gutterBottom
-        >
+      <Paper elevation={3} style={{ padding: 20, marginBottom: 20 }}>
+        <Typography variant="h4" align="center" gutterBottom>
           CREATE DONOR
         </Typography>
         <form onSubmit={handleSubmit(onSubmitHandler)}>
@@ -48,7 +43,6 @@ const DonorForm = ({ onSubmit }) => {
             <Grid item xs={12} sm={6}>
               <TextField
                 {...register("donor_cnic", {
-                  required: true,
                   minLength: 13,
                   maxLength: 13,
                   pattern: /^[0-9]+$/,
@@ -64,7 +58,7 @@ const DonorForm = ({ onSubmit }) => {
                 }
               />
             </Grid>
-            <Grid item xs={12} sm={12}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 {...register("donor_contact", {
                   required: true,
@@ -73,30 +67,35 @@ const DonorForm = ({ onSubmit }) => {
                 })}
                 label="Contact"
                 variant="outlined"
+                type="number"
                 fullWidth
                 error={errors.donor_contact ? true : false}
                 helperText={
                   errors.donor_contact
                     ? "Invalid contact number (At least 11 digits)"
-                    : ""
+                    : "Will be considered as Donor username"
                 }
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                {...register("donor_city", { required: true })}
+                label="City"
+                variant="outlined"
+                fullWidth
+                error={errors.donor_city ? true : false}
               />
             </Grid>
             <Grid item xs={12}>
               <TextField
                 {...register("donor_email", {
-                  required: true,
                   pattern: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
                 })}
                 label="Email"
                 variant="outlined"
                 fullWidth
                 error={errors.donor_email ? true : false}
-                helperText={
-                  errors.donor_email
-                    ? "Invalid email address"
-                    : "Will be considered as Donor username"
-                }
+                helperText={errors.donor_email ? "Invalid email address" : ""}
               />
             </Grid>
             <Grid item xs={12}>

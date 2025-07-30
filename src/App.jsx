@@ -69,6 +69,10 @@ import ProjectionDataGrid from "./components/Admin/ProjectionSheet/ProjectionDat
 import ProjectionDashboard1 from "./components/Admin/ProjectionSheet/ProjectionDashBoard1";
 import StudentProjections from "./components/Admin/ProjectionSheet/StudentProjections";
 import StudentallProjections from "./components/DonorPortal/StudentallProjections";
+import DonorListPage from "./components/Admin/DonorPaymentRecord/DonorListPage";
+import SubscriptionPage from "./components/Admin/DonorPaymentRecord/SubscriptionPage";
+import AddDonor from "./components/Admin/DonorPaymentRecord/AddDonor";
+import DonorsBySourceTable from "./components/Admin/DonorPaymentRecord/DonorsBySourceTable";
 
 // Function to check if the user is authenticated
 const isAuthenticated = () => {
@@ -154,6 +158,7 @@ const router = createBrowserRouter([
     children: [
       // admin paths
       { index: true, element: <AdminDashboard /> },
+      { path: "source-donors/:source", element: <DonorsBySourceTable /> },
       { path: "allApplications", element: <AllApplications /> },
       { path: "addApplicationss", element: <AddApplicationForm /> },
       { path: "allVarification", element: <AllVarification /> },
@@ -161,6 +166,9 @@ const router = createBrowserRouter([
       { path: "addVarification", element: <CreateVerificationForm /> },
       { path: "addInterview", element: <CreateInterviewForm /> },
       { path: "Reports", element: <Reports /> },
+      { path: "donors", element: <DonorListPage /> },
+      { path: "addDonor", element: <AddDonor /> },
+      { path: "donors/:id/plan", element: <SubscriptionPage /> },
 
       {
         path: "editApplications/:applicationId",
@@ -274,4 +282,3 @@ function App() {
 }
 
 export default App;
-

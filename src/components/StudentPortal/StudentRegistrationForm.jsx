@@ -16,7 +16,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { useNavigate } from "react-router-dom";
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
-import logo from "../../assets/Pnglogo.png";
+import logo from "../../assets/NAIZ_LOGO.png";
 import Divider from "@mui/material/Divider";
 import MenuItem from "@mui/material/MenuItem";
 import Drawer from "@mui/material/Drawer";
@@ -31,6 +31,7 @@ import WcIcon from "@mui/icons-material/Wc";
 import LockIcon from "@mui/icons-material/Lock";
 import BadgeIcon from "@mui/icons-material/Badge";
 import FaceIcon from "@mui/icons-material/Face";
+import bg from "../../assets/loginbg.jpg";
 
 const logoStyle = {
   marginLeft: "30px",
@@ -103,7 +104,9 @@ const StudentRegistrationForm = () => {
   const [success, setSuccess] = useState("");
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [users, setUsers] = useState([]);
-  const BASE_URL = "https://zeenbackend-production.up.railway.app";
+  // const BASE_URL = "http://127.0.0.1:8000";
+  const BASE_URL =
+    "https://niazeducationscholarshipsbackend-production.up.railway.app";
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -135,7 +138,7 @@ const StudentRegistrationForm = () => {
   };
   const [formData, setFormData] = useState({
     student_name: "",
-    email: "",
+    cnic: "",
     father_name: "",
     last_name: "",
     gender: "",
@@ -159,9 +162,9 @@ const StudentRegistrationForm = () => {
       return;
     }
     // Check if the username already exists
-    const existingUser = users.find((user) => user.username === formData.email);
+    const existingUser = users.find((user) => user.username === formData.cnic);
     if (existingUser) {
-      setError("This email is already in use");
+      setError("This cnic is already in use");
       setOpenSnackbar(true);
       return;
     }
@@ -176,7 +179,7 @@ const StudentRegistrationForm = () => {
       setOpenSnackbar(true);
       setFormData({
         student_name: "",
-        email: "",
+        cnic: "",
         father_name: "",
         last_name: "",
         gender: "",
@@ -225,26 +228,27 @@ const StudentRegistrationForm = () => {
             <Box
               sx={{
                 display: { xs: "none", md: "flex" },
-                gap: 2,
+                gap: 4,
                 alignItems: "center",
               }}
             >
               {/* <ToggleColorMode mode={mode} toggleColorMode={toggleColorMode} /> */}
               <Button
                 color="primary"
-                variant="text"
+                variant="contained"
                 size="small"
                 component="a"
                 onClick={handleLoginClick}
                 target="_blank"
                 style={{
                   borderRadius: "5px",
-                  backgroundColor: "#fff",
-                  color: "#148581",
+                  backgroundColor: "#066da2",
+                  color: "#fff",
                   fontWeight: 700,
+                  marginTop: "2px",
                 }}
               >
-                Log In
+                LogIn
               </Button>
               <Button
                 color="primary"
@@ -255,7 +259,7 @@ const StudentRegistrationForm = () => {
                 target="_blank"
                 style={{
                   borderRadius: "5px",
-                  backgroundColor: "#148581",
+                  backgroundColor: "#066da2",
                   color: "#fff",
                   fontWeight: 700,
                 }}
@@ -283,18 +287,18 @@ const StudentRegistrationForm = () => {
                   }}
                 >
                   {/* <Box
-                           sx={{
-                             display: "flex",
-                             flexDirection: "column",
-                             alignItems: "end",
-                             flexGrow: 1,
-                           }}
-                         >
-                           <ToggleColorMode
-                             mode={mode}
-                             toggleColorMode={toggleColorMode}
-                           />
-                         </Box> */}
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "end",
+                      flexGrow: 1,
+                    }}
+                  >
+                    <ToggleColorMode
+                      mode={mode}
+                      toggleColorMode={toggleColorMode}
+                    />
+                  </Box> */}
                   <MenuItem onClick={() => scrollToSection("features")}>
                     ZEEN
                   </MenuItem>
@@ -331,7 +335,6 @@ const StudentRegistrationForm = () => {
         </AppBar>
 
         {/* register form */}
-
         <Grid
           container
           component="main"
@@ -363,29 +366,29 @@ const StudentRegistrationForm = () => {
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                paddingX: "60px",
-                gap: 4,
+                width: "110%",
+                backgroundImage: `url(${bg})`,
+                backgroundSize: "cover",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center",
+                minHeight: "100%", // or any height you want
               }}
             >
-              <Typography
+              <Box
                 sx={{
-                  fontSize: "18px",
-                  fontWeight: 600,
-                  textAlign: "left",
-                  color: "#14475a",
-                  lineHeight: 1.4,
+                  backgroundColor: "#e2e8f0",
+                  borderRadius: "100%",
+                  padding: "50px",
                 }}
               >
-                Welcome to Zeen Education Sponsorship Network, where your
-                journey towards knowledge and opportunity begins!
-              </Typography>
-              <img src={logo} alt="logo of sitemark" />
+                <img src={logo} alt="logo of sitemark" width={120} />
+              </Box>
             </Box>
 
             {/* form */}
             <Box
               sx={{
-                backgroundColor: "#148581",
+                backgroundColor: "#e2e8f0",
                 height: "100%",
                 width: "100%",
                 borderTopRightRadius: "10px",
@@ -404,9 +407,9 @@ const StudentRegistrationForm = () => {
                   <Box className="rounded-sm  p-4 flex flex-col w-96 ">
                     <Typography
                       variant="h7"
-                      className="pt-3 pb-3 text-white "
+                      className="pt-3 pb-3 text-white font-bold "
                       sx={{
-                        backgroundColor: "#14475a",
+                        backgroundColor: "#056da1",
                         marginBottom: 3,
                         borderTopLeftRadius: "5px",
                         borderTopRightRadius: "5px",
@@ -433,13 +436,34 @@ const StudentRegistrationForm = () => {
                               onChange={handleChange}
                               required
                               fullWidth
-                              sx={textFieldStyles}
                               InputProps={{
                                 startAdornment: (
                                   <InputAdornment position="start">
-                                    <PersonIcon />
+                                    <PersonIcon sx={{ color: "#066da2" }} />
                                   </InputAdornment>
                                 ),
+                                sx: {
+                                  color: "#000", // text color
+                                  "& .MuiOutlinedInput-notchedOutline": {
+                                    borderColor: "#aaa", // outline color
+                                  },
+                                  "&:hover .MuiOutlinedInput-notchedOutline": {
+                                    borderColor: "#aaa",
+                                  },
+                                  "&.Mui-focused .MuiOutlinedInput-notchedOutline":
+                                    {
+                                      borderColor: "#aaa",
+                                    },
+                                  backgroundColor: "white",
+                                },
+                              }}
+                              InputLabelProps={{
+                                sx: {
+                                  color: "#aaa", // label color
+                                  "&.Mui-focused": {
+                                    color: "#aaa",
+                                  },
+                                },
                               }}
                               placeholder="Enter your first name"
                             />
@@ -452,13 +476,34 @@ const StudentRegistrationForm = () => {
                               onChange={handleChange}
                               required
                               fullWidth
-                              sx={textFieldStyles}
                               InputProps={{
                                 startAdornment: (
                                   <InputAdornment position="start">
-                                    <BadgeIcon />
+                                    <BadgeIcon sx={{ color: "#066da2" }} />
                                   </InputAdornment>
                                 ),
+                                sx: {
+                                  color: "#000", // text color
+                                  "& .MuiOutlinedInput-notchedOutline": {
+                                    borderColor: "#aaa", // outline color
+                                  },
+                                  "&:hover .MuiOutlinedInput-notchedOutline": {
+                                    borderColor: "#aaa",
+                                  },
+                                  "&.Mui-focused .MuiOutlinedInput-notchedOutline":
+                                    {
+                                      borderColor: "#aaa",
+                                    },
+                                  backgroundColor: "white",
+                                },
+                              }}
+                              InputLabelProps={{
+                                sx: {
+                                  color: "#aaa", // label color
+                                  "&.Mui-focused": {
+                                    color: "#aaa",
+                                  },
+                                },
                               }}
                               placeholder="Enter your last name"
                             />
@@ -471,40 +516,84 @@ const StudentRegistrationForm = () => {
                               onChange={handleChange}
                               required
                               fullWidth
-                              sx={textFieldStyles}
                               InputProps={{
                                 startAdornment: (
                                   <InputAdornment position="start">
-                                    <FaceIcon />
+                                    <FaceIcon sx={{ color: "#066da2" }} />
                                   </InputAdornment>
                                 ),
+                                sx: {
+                                  color: "#000", // text color
+                                  "& .MuiOutlinedInput-notchedOutline": {
+                                    borderColor: "#aaa", // outline color
+                                  },
+                                  "&:hover .MuiOutlinedInput-notchedOutline": {
+                                    borderColor: "#aaa",
+                                  },
+                                  "&.Mui-focused .MuiOutlinedInput-notchedOutline":
+                                    {
+                                      borderColor: "#aaa",
+                                    },
+                                  backgroundColor: "white",
+                                },
+                              }}
+                              InputLabelProps={{
+                                sx: {
+                                  color: "#aaa", // label color
+                                  "&.Mui-focused": {
+                                    color: "#aaa",
+                                  },
+                                },
                               }}
                               placeholder="Enter your father name"
                             />
                           </Grid>
                           <Grid item xs={12}>
                             <TextField
-                              name="email"
-                              label="Email"
-                              type="email"
-                              value={formData.email}
+                              name="cnic"
+                              label="B-Form/CNIC
+"
+                              type="cnic"
+                              value={formData.cnic}
                               onChange={handleChange}
                               required
                               fullWidth
-                              sx={textFieldStyles}
                               helperText={
                                 <span className="text-red-700">
-                                  Email will be considered as your username
+                                  B-Form/CNIC will be considered as your
+                                  username
                                 </span>
                               }
                               InputProps={{
                                 startAdornment: (
                                   <InputAdornment position="start">
-                                    <EmailIcon />
+                                    <EmailIcon sx={{ color: "#066da2" }} />
                                   </InputAdornment>
                                 ),
+                                sx: {
+                                  color: "#000", // text color
+                                  "& .MuiOutlinedInput-notchedOutline": {
+                                    borderColor: "#aaa", // outline color
+                                  },
+                                  "&:hover .MuiOutlinedInput-notchedOutline": {
+                                    borderColor: "#aaa",
+                                  },
+                                  "&.Mui-focused .MuiOutlinedInput-notchedOutline":
+                                    {
+                                      borderColor: "#aaa",
+                                    },
+                                  backgroundColor: "white",
+                                },
                               }}
-                              placeholder="Enter your email"
+                              InputLabelProps={{
+                                sx: {
+                                  color: "#aaa", // label color
+                                  "&.Mui-focused": {
+                                    color: "#aaa",
+                                  },
+                                },
+                              }}
+                              placeholder="Enter your B-Form/CNIC"
                             />
                           </Grid>
                           <Grid item xs={12}>
@@ -516,13 +605,34 @@ const StudentRegistrationForm = () => {
                               onChange={handleChange}
                               required
                               fullWidth
-                              sx={textFieldStyles}
                               InputProps={{
                                 startAdornment: (
                                   <InputAdornment position="start">
-                                    <WcIcon />
+                                    <WcIcon sx={{ color: "#066da2" }} />
                                   </InputAdornment>
                                 ),
+                                sx: {
+                                  color: "#000", // text color
+                                  "& .MuiOutlinedInput-notchedOutline": {
+                                    borderColor: "#aaa", // outline color
+                                  },
+                                  "&:hover .MuiOutlinedInput-notchedOutline": {
+                                    borderColor: "#aaa",
+                                  },
+                                  "&.Mui-focused .MuiOutlinedInput-notchedOutline":
+                                    {
+                                      borderColor: "#aaa",
+                                    },
+                                  backgroundColor: "white",
+                                },
+                              }}
+                              InputLabelProps={{
+                                sx: {
+                                  color: "#aaa", // label color
+                                  "&.Mui-focused": {
+                                    color: "#aaa",
+                                  },
+                                },
                               }}
                               placeholder="Enter your gender"
                             >
@@ -545,13 +655,34 @@ const StudentRegistrationForm = () => {
                               onChange={handleChange}
                               required
                               fullWidth
-                              sx={textFieldStyles}
                               InputProps={{
                                 startAdornment: (
                                   <InputAdornment position="start">
-                                    <LockIcon />
+                                    <LockIcon sx={{ color: "#066da2" }} />
                                   </InputAdornment>
                                 ),
+                                sx: {
+                                  color: "#000", // text color
+                                  "& .MuiOutlinedInput-notchedOutline": {
+                                    borderColor: "#aaa", // outline color
+                                  },
+                                  "&:hover .MuiOutlinedInput-notchedOutline": {
+                                    borderColor: "#aaa",
+                                  },
+                                  "&.Mui-focused .MuiOutlinedInput-notchedOutline":
+                                    {
+                                      borderColor: "#aaa",
+                                    },
+                                  backgroundColor: "white",
+                                },
+                              }}
+                              InputLabelProps={{
+                                sx: {
+                                  color: "#aaa", // label color
+                                  "&.Mui-focused": {
+                                    color: "#aaa",
+                                  },
+                                },
                               }}
                               placeholder="Enter your password"
                             />
@@ -565,13 +696,34 @@ const StudentRegistrationForm = () => {
                               onChange={handleChange}
                               required
                               fullWidth
-                              sx={textFieldStyles}
                               InputProps={{
                                 startAdornment: (
                                   <InputAdornment position="start">
-                                    <LockIcon />
+                                    <LockIcon sx={{ color: "#066da2" }} />
                                   </InputAdornment>
                                 ),
+                                sx: {
+                                  color: "#000", // text color
+                                  "& .MuiOutlinedInput-notchedOutline": {
+                                    borderColor: "#aaa", // outline color
+                                  },
+                                  "&:hover .MuiOutlinedInput-notchedOutline": {
+                                    borderColor: "#aaa",
+                                  },
+                                  "&.Mui-focused .MuiOutlinedInput-notchedOutline":
+                                    {
+                                      borderColor: "#aaa",
+                                    },
+                                  backgroundColor: "white",
+                                },
+                              }}
+                              InputLabelProps={{
+                                sx: {
+                                  color: "#aaa", // label color
+                                  "&.Mui-focused": {
+                                    color: "#aaa",
+                                  },
+                                },
                               }}
                               placeholder="Confirm Password"
                             />
@@ -582,13 +734,13 @@ const StudentRegistrationForm = () => {
                               variant="contained"
                               sx={{
                                 borderRadius: "5px",
-                                backgroundColor: "#fff",
-                                color: "#148581",
+                                backgroundColor: "#066da2",
+                                color: "#fff",
                                 fontWeight: 700,
                                 marginTop: "12px",
                                 ":hover": {
-                                  backgroundColor: "#148581",
-                                  color: "#fafafa",
+                                  backgroundColor: "#066da2",
+                                  color: "#fff",
                                 },
                               }}
                             >

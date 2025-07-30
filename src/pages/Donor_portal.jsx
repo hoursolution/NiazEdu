@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Outlet, useLocation, useNavigate, matchPath } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { SidebarOne } from "../components/SideBar/DonorSideBar";
 import DonorNavBar from "../components/DonorPortal/Navbar";
 import { Box, IconButton } from "@mui/material";
@@ -13,22 +13,13 @@ const DonorPortal = () => {
   const [selectedMenuItem, setSelectedMenuItem] = useState("DASHBOARD");
   const navigate = useNavigate();
 
-  const location = useLocation();
-  useEffect(() => {
-    const isStudentProjectionPage = matchPath(
-      "/donor/studentallprojections/:studentId",
-      location.pathname
-    );
-    setSidebarOpen(!isStudentProjectionPage); // Automatically close sidebar if matched
-  }, [location.pathname]);
-
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login");
     }
 
-    const tokenExpirationTime = 365 * 24 * 60 * 60 * 1000;
+    const tokenExpirationTime = 2 * 60 * 60 * 1000;
     const timer = setTimeout(() => {
       localStorage.removeItem("token");
       navigate("/login");
@@ -80,8 +71,8 @@ const DonorPortal = () => {
           onClick={handleSidebarToggle}
           sx={{
             position: "fixed",
-            top: sidebarOpen ? "54px" : "54px",
-            left: sidebarOpen ? drawerWidth - 34 : -8,
+            top: sidebarOpen ? "95px" : "54px",
+            left: sidebarOpen ? drawerWidth - 34 : -15,
             zIndex: 9999,
             backgroundColor: "#14475a",
             color: "white",
